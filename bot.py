@@ -1,30 +1,27 @@
+import asyncio
+
 from aiogram import Bot, Dispatcher
-from aiogram.filters import Command, CommandStart
-from aiogram.types import Message
 
 from config_data.config import load_config
 from keyboards.set_menu import set_main_menu
-from lexicon.lexicon import LEXICON_RU
+from handlers import other_handlers, user_handlers
 
-config = load_config('.env')
-
-SUPER_ADMIN = config.tg_bot.admin_ids[0]
+# SUPER_ADMIN = config.tg_bot.admin_ids[0]
 
 
-bot = Bot(token=config.tg_bot.token, parse_mode="HTML")
-dp = Dispatcher()
-set_main_menu(bot)
+async def main():
+    config = load_config('.env')
+    bot = Bot(token=config.tg_bot.token, parse_mode="HTML")
+    dp = Dispatcher()
+    await set_main_menu(bot)
 
+    dp.include_router(user_handlers.router)
+    dp.include_router(other_handlers.router)
 
-@dp.message(CommandStart())
-async def start_command(message: Message):
-    await message.answer(text=LEXICON_RU['/start'])
-
-
-@dp.message(Command('help'))
-async def help_command(message: Message):
-    await message.answer(text=LEXICON_RU['/help'])
+    # Passing accumulated updates and starting polling
+    await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot)
 
 
 if __name__ == '__main__':
-    dp.run_polling(bot)
+    asyncio.run(main())
