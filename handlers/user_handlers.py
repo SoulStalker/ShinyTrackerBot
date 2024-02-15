@@ -1,7 +1,7 @@
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
-from aiogram.types import Message
-from keyboards.keyboards import common_keyboard
+from aiogram.types import Message, CallbackQuery
+from keyboards.keyboards import common_keyboard, categories_keyboard
 from lexicon.lexicon import LEXICON_RU
 
 
@@ -40,9 +40,23 @@ async def delete_category(message: Message):
 
 @router.message(F.text == LEXICON_RU['choose_category'])
 async def choose_category(message: Message):
-    await message.answer("Выбираем категорию", reply_markup=common_keyboard)
+    await message.answer("Выбери категорию", reply_markup=categories_keyboard)
 
 
 @router.message(F.text == LEXICON_RU['statistics'])
 async def statistics(message: Message):
     await message.answer("Тут выводим статистику", reply_markup=common_keyboard)
+
+
+@router.callback_query(F.data == 'cat_1_pressed')
+async def cat_1_pressed(callback: CallbackQuery):
+    if callback.data != 'cat_1_pressed':
+        await callback.message.edit_text(text='cat 1 pressed', reply_markup=callback.message.reply_markup)
+    await callback.answer(text="WOW 1")
+
+
+@router.callback_query(F.data == 'cat_2_pressed')
+async def cat_2_pressed(callback: CallbackQuery):
+    if callback.data != 'cat_2_pressed':
+        await callback.message.edit_text(text='cat 2 pressed', reply_markup=callback.message.reply_markup)
+    await callback.answer(text="WOW 2", show_alert=True)

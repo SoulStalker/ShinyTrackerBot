@@ -1,7 +1,8 @@
-from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
+from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
 from lexicon.lexicon import LEXICON_RU
+from services.services import categories
 
 button_add_category = KeyboardButton(text=LEXICON_RU['add_category'])
 button_delete_category = KeyboardButton(text=LEXICON_RU['delete_category'])
@@ -16,3 +17,16 @@ common_keyboard: ReplyKeyboardMarkup = common_keyboard_builder.as_markup(
     one_time_keyboard=True,
     resize_keyboard=True
 )
+
+
+big_button_1 = InlineKeyboardButton(
+    text='Категория_1',
+    callback_data='cat_1_pressed'
+)
+
+big_button_2 = InlineKeyboardButton(
+    text='Категория_2',
+    callback_data='cat_2_pressed'
+)
+categories_keyboard = InlineKeyboardMarkup(
+    inline_keyboard=[[big_button_1], [big_button_2]])
