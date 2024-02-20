@@ -5,7 +5,7 @@ def get_categories():
     return sorted(categories.keys())
 
 
-def add_category(category):
+def add_category(category: str) -> None:
     categories.setdefault(category, 0)
 
 

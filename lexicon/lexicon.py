@@ -22,4 +22,7 @@ LEXICON_RU: dict[str, str] = {
     'choose_category': 'Категория',
     'statistics': 'Статистика',
     'other_answer': 'Это ни на что не похоже',
+    '/add_category': 'Введите название категории',
+    'really_add_category': 'Добавить',
+    'cancel_add_category': 'Не надо',
 }

@@ -44,3 +44,21 @@ common_keyboard: ReplyKeyboardMarkup = common_keyboard_builder.as_markup(
 )
 
 categories_keyboard = create_inline_keyboard(2, *categories)
+
+
+def create_add_category_kb(category_name: str) -> InlineKeyboardMarkup:
+    kb_builder = InlineKeyboardBuilder()
+    kb_builder.row(
+        InlineKeyboardButton(
+            text=LEXICON_RU['really_add_category'],
+            callback_data='really_add'
+    ),
+        InlineKeyboardButton(
+            text=LEXICON_RU['cancel_add_category'],
+            callback_data='cancel_add'
+        ),
+        width=2
+    )
+    return kb_builder.as_markup()
+
+
