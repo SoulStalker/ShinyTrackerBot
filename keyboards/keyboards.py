@@ -96,3 +96,20 @@ def create_stop_task_kb(task: str) -> InlineKeyboardMarkup:
         callback_data=f'{task}_stop'
     ))
     return kb_builder.as_markup()
+
+
+def create_start_yes_no_kb() -> InlineKeyboardMarkup:
+    """
+    Функция создает инлайн клавиатуру для начала работы
+    :return: InlineKeyboardMarkup
+    """
+    kb_builder = InlineKeyboardBuilder()
+    kb_builder.add(InlineKeyboardButton(
+        text=LEXICON_RU['yes'],
+        callback_data='yes'
+    ))
+    kb_builder.add(InlineKeyboardButton(
+        text=LEXICON_RU['cancel'],
+        callback_data='cancel'
+    ))
+    return kb_builder.as_markup()
