@@ -2,16 +2,18 @@ from copy import deepcopy
 
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup
+from aiogram.types import Message, CallbackQuery
 
-from keyboards.keyboards import common_keyboard, categories_keyboard, create_add_category_kb, create_edit_category_kb
+from keyboards.keyboards import common_keyboard, create_categories_keyboard, create_add_category_kb, create_edit_category_kb
 from lexicon.lexicon import LEXICON_RU
 from database.database import users_db, user_dict_template
+from filters.filters import IsUsersCategories
 
 router = Router()
 last_category = None
 
 
+# Этот хендлер срабатывает на компанду /start и создает базу данных
 @router.message(CommandStart())
 async def start_command(message: Message):
     await message.answer(text=LEXICON_RU['/start'], reply_markup=common_keyboard)
@@ -39,6 +41,8 @@ async def add_category(message: Message):
     await message.answer(text=LEXICON_RU['/add_category'], reply_markup=common_keyboard)
 
 
+# Этот хендлер срабатывает на нажатие кнопки "Редактировать категории"
+# в ответ выдается инлайн клавиатура с категориями
 @router.message(F.text == LEXICON_RU['edit_categories'])
 async def edit_categories(message: Message):
     if users_db[message.from_user.id]['categories']:
@@ -49,12 +53,16 @@ async def edit_categories(message: Message):
             )
         )
     else:
-        await message.answer(text=LEXICON_RU['no_category'])
+        await message.answer(text=LEXICON_RU['no_category'], reply_markup=common_keyboard)
 
 
 @router.message(F.text == LEXICON_RU['choose_category'])
 async def choose_category(message: Message):
-    await message.answer("Выбери категорию", reply_markup=categories_keyboard)
+    await message.answer(
+        text="Выбери категорию",
+        reply_markup=create_categories_keyboard(
+            width=2,
+            args=users_db[message.from_user.id]['categories']))
 
 
 @router.message(F.text == LEXICON_RU['statistics'])
@@ -65,17 +73,22 @@ async def statistics(message: Message):
 @router.callback_query(F.data == 'cat_1_pressed')
 async def cat_1_pressed(callback: CallbackQuery):
     if callback.data != 'cat_1_pressed':
-        await callback.message.edit_text(text='cat 1 pressed', reply_markup=callback.message.reply_markup)
+        await callback.message.edit_text(
+            text='cat 1 pressed',
+            reply_markup=callback.message.reply_markup)
     await callback.answer(text="WOW 1")
 
 
 @router.callback_query(F.data == 'cat_2_pressed')
 async def cat_2_pressed(callback: CallbackQuery):
     if callback.data != 'cat_2_pressed':
-        await callback.message.edit_text(text='cat 2 pressed', reply_markup=callback.message.reply_markup)
+        await callback.message.edit_text(
+            text='cat 2 pressed',
+            reply_markup=callback.message.reply_markup)
     await callback.answer(text="WOW 2", show_alert=True)
 
 
+# Этот хендлер срабатывает на сообщения которые начинаются с точки. Пока фильтрую так
 @router.message(lambda x: len(x.text) < 20 and x.text.startswith('.'))
 async def add_cat(message: Message):
     global last_category
@@ -90,10 +103,10 @@ async def add_cat(message: Message):
 
 
 # Этот хендлер срабатывает на кнопку отмена в инлайне добавления категории
-@router.callback_query(F.data == 'cancel_add')
+@router.callback_query(F.data == 'cancel')
 async def process_cancel_press(callback: CallbackQuery):
     await callback.message.edit_text(text=LEXICON_RU['/add_category'])
-    await callback.answer()
+    await callback.answer(reply_markup=common_keyboard)
 
 
 # Этот хендлер срабатывает на кнопку добавить в инлайне добавления категории
@@ -102,9 +115,25 @@ async def process_really_add_press(callback: CallbackQuery):
     users_db[callback.from_user.id]['categories'].add(
         last_category
     )
-    await callback.answer(
-        text=f"{LEXICON_RU['category added']} {last_category}",
-        show_alert=True
+    await callback.message.answer(
+        text=f"{LEXICON_RU['category added']} {last_category}\n"
+             f"{LEXICON_RU['another category']}"
+             f"{LEXICON_RU['/add_category']}",
+        reply_markup=common_keyboard
     )
+
+
+# Этот хендлер срабатывает на нажатие на категорию в инлайне редактирования категорий
+@router.callback_query(IsUsersCategories())
+async def process_press_categories(callback: CallbackQuery):
+    users_db[callback.from_user.id]['categories'].remove(callback.data[:-3])
+    await callback.message.edit_text(
+        text=LEXICON_RU['/edit_categories'],
+        reply_markup=create_edit_category_kb(
+            *users_db[callback.from_user.id]['categories'])
+    )
+    await callback.answer(
+        text=f"{LEXICON_RU['category_deleted']} {callback.data[:-3]}")
+
 
 

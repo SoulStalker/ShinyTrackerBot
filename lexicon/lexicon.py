@@ -23,6 +23,8 @@ LEXICON_RU: dict[str, str] = {
     'choose_category': 'Категория',
     'statistics': 'Статистика',
     'other_answer': 'Это ни на что не похоже',
+    'another category': 'Добавить еще категорию?\n\n',
+    'category_deleted': 'Удалена категория ',
     '/add_category': 'Введите название категории начиная с точки, например .django',
     'really_add_category': 'Добавить',
     'cancel_add_category': 'Не надо',

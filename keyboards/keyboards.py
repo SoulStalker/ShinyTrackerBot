@@ -16,7 +16,7 @@ common_keyboard_builder.row(button_choose_category, button_add_category,
 
 
 # Function for generating inline keyboards "on the fly"
-def create_inline_keyboard(width: int, *args: str, **kwargs: str) -> InlineKeyboardMarkup:
+def create_categories_keyboard(width: int = 2, *args: str, **kwargs: str) -> InlineKeyboardMarkup:
     # Initialize the builder
     kb_builder = InlineKeyboardBuilder()
     buttons: list[InlineKeyboardButton] = []
@@ -44,19 +44,21 @@ common_keyboard: ReplyKeyboardMarkup = common_keyboard_builder.as_markup(
     resize_keyboard=True
 )
 
-categories_keyboard = create_inline_keyboard(2, *categories.keys())
-
 
 def create_add_category_kb() -> InlineKeyboardMarkup:
+    """
+    Функция создает инлайн клавиатуру для добавления категорий
+    :return: InlineKeyboardMarkup:
+    """
     kb_builder = InlineKeyboardBuilder()
     kb_builder.row(
         InlineKeyboardButton(
             text=LEXICON_RU['really_add_category'],
             callback_data='really_add'
-    ),
+        ),
         InlineKeyboardButton(
             text=LEXICON_RU['cancel_add_category'],
-            callback_data='cancel_add'
+            callback_data='cancel'
         ),
         width=2
     )
@@ -64,6 +66,11 @@ def create_add_category_kb() -> InlineKeyboardMarkup:
 
 
 def create_edit_category_kb(*args: str) -> InlineKeyboardMarkup:
+    """
+    Функция создает инлайн клавиатура для редактирования категорий
+    :param args:
+    :return: InlineKeyboardMarkup
+    """
     kb_builder = InlineKeyboardBuilder()
     for button in sorted(args):
         kb_builder.row(InlineKeyboardButton(
@@ -77,5 +84,3 @@ def create_edit_category_kb(*args: str) -> InlineKeyboardMarkup:
         )
     )
     return kb_builder.as_markup()
-
-
