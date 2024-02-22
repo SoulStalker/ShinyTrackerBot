@@ -21,6 +21,7 @@ LEXICON_RU: dict[str, str] = {
     'edit_categories': 'Редактировать категории',
     '/edit_categories': 'Нажми на категорию чтобы удалить',
     'choose_category': 'Категория',
+    '/choose_category': 'Выбери категорию для запуска задачи:',
     'statistics': 'Статистика',
     'other_answer': 'Это ни на что не похоже',
     'another category': 'Добавить еще категорию?\n\n',
@@ -34,5 +35,7 @@ LEXICON_RU: dict[str, str] = {
     'cancel': 'Отмена',
     '/stop': 'Остановить работу по задаче ',
     'start_work': 'Начата работа по категории ',
-    'stop_work': '\nДля остановки нажмите на кнопку ниже'
+    'stop_work': '\nДля остановки нажмите на кнопку ниже',
+    'task for category': 'Работа по категории',
+    'is stopped': 'остановлена',
 }

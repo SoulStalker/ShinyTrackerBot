@@ -8,7 +8,7 @@ from keyboards.keyboards import (common_keyboard, create_categories_keyboard,
                                  create_add_category_kb, create_edit_category_kb, create_stop_task_kb)
 from lexicon.lexicon import LEXICON_RU
 from database.database import users_db, user_dict_template
-from filters.filters import IsUsersCategories, ShowUsersCategories
+from filters.filters import IsUsersCategories, ShowUsersCategories, IsStopTasks
 
 router = Router()
 last_category = None
@@ -60,7 +60,7 @@ async def edit_categories(message: Message):
 @router.message(F.text == LEXICON_RU['choose_category'])
 async def choose_category(message: Message):
     await message.answer(
-        text="Выбери категорию",
+        text=LEXICON_RU['/choose_category'],
         reply_markup=create_categories_keyboard(
             2,
             *users_db[message.from_user.id]['categories']))
@@ -119,6 +119,7 @@ async def process_press_categories(callback: CallbackQuery):
         text=f"{LEXICON_RU['category_deleted']} {callback.data[:-3]}")
 
 
+# Этот хендлер срабатывает на нажатие на категорию в списке и запускает работу по задаче
 @router.callback_query(ShowUsersCategories())
 async def process_choose_category(callback: CallbackQuery):
     chosen_category = callback.data
@@ -128,10 +129,15 @@ async def process_choose_category(callback: CallbackQuery):
     )
 
 
-@router.callback_query(F.data.startswith(LEXICON_RU["/stop"]))
+# Этот хендлер срабатывает на нажатие остановки задачи
+@router.callback_query(IsStopTasks())
 async def process_stop(callback: CallbackQuery):
     await callback.message.answer(
-        text=LEXICON_RU['/stop'],
-        reply_markup=create_edit_category_kb(
+        text=LEXICON_RU['/choose_category'],
+        reply_markup=create_categories_keyboard(
+            2,
             *users_db[callback.from_user.id]['categories'])
     )
+    await callback.answer(
+        text=f"{LEXICON_RU['task for category']} {callback.data[:-5]} {LEXICON_RU['is stopped']}")
+
