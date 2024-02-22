@@ -2,8 +2,6 @@ from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardMar
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
 from lexicon.lexicon import LEXICON_RU
-from services.services import categories
-from database.database import users_db
 
 button_add_category = KeyboardButton(text=LEXICON_RU['add_category'])
 button_edit_categories = KeyboardButton(text=LEXICON_RU['edit_categories'])
@@ -16,7 +14,7 @@ common_keyboard_builder.row(button_choose_category, button_add_category,
 
 
 # Function for generating inline keyboards "on the fly"
-def create_categories_keyboard(width: int = 2, *args: str, **kwargs: str) -> InlineKeyboardMarkup:
+def create_categories_keyboard(width: int = 2, *args: str | set, **kwargs: str) -> InlineKeyboardMarkup:
     # Initialize the builder
     kb_builder = InlineKeyboardBuilder()
     buttons: list[InlineKeyboardButton] = []
@@ -67,7 +65,7 @@ def create_add_category_kb() -> InlineKeyboardMarkup:
 
 def create_edit_category_kb(*args: str) -> InlineKeyboardMarkup:
     """
-    Функция создает инлайн клавиатура для редактирования категорий
+    Функция создает инлайн клавиатуру для редактирования категорий
     :param args:
     :return: InlineKeyboardMarkup
     """
@@ -83,4 +81,18 @@ def create_edit_category_kb(*args: str) -> InlineKeyboardMarkup:
             callback_data='cancel'
         )
     )
+    return kb_builder.as_markup()
+
+
+def create_stop_task_kb(task: str) -> InlineKeyboardMarkup:
+    """
+    Функция создает инлайн клавиатуру для остановки текущей задачи
+    :param task:
+    :return: InlineKeyboardMarkup
+    """
+    kb_builder = InlineKeyboardBuilder()
+    kb_builder.row(InlineKeyboardButton(
+        text=f'{LEXICON_RU["/stop"]} {task}',
+        callback_data=f'{task}_stop'
+    ))
     return kb_builder.as_markup()

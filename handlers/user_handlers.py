@@ -4,10 +4,11 @@ from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message, CallbackQuery
 
-from keyboards.keyboards import common_keyboard, create_categories_keyboard, create_add_category_kb, create_edit_category_kb
+from keyboards.keyboards import (common_keyboard, create_categories_keyboard,
+                                 create_add_category_kb, create_edit_category_kb, create_stop_task_kb)
 from lexicon.lexicon import LEXICON_RU
 from database.database import users_db, user_dict_template
-from filters.filters import IsUsersCategories
+from filters.filters import IsUsersCategories, ShowUsersCategories
 
 router = Router()
 last_category = None
@@ -61,31 +62,13 @@ async def choose_category(message: Message):
     await message.answer(
         text="Выбери категорию",
         reply_markup=create_categories_keyboard(
-            width=2,
-            args=users_db[message.from_user.id]['categories']))
+            2,
+            *users_db[message.from_user.id]['categories']))
 
 
 @router.message(F.text == LEXICON_RU['statistics'])
 async def statistics(message: Message):
     await message.answer("Тут выводим статистику", reply_markup=common_keyboard)
-
-
-@router.callback_query(F.data == 'cat_1_pressed')
-async def cat_1_pressed(callback: CallbackQuery):
-    if callback.data != 'cat_1_pressed':
-        await callback.message.edit_text(
-            text='cat 1 pressed',
-            reply_markup=callback.message.reply_markup)
-    await callback.answer(text="WOW 1")
-
-
-@router.callback_query(F.data == 'cat_2_pressed')
-async def cat_2_pressed(callback: CallbackQuery):
-    if callback.data != 'cat_2_pressed':
-        await callback.message.edit_text(
-            text='cat 2 pressed',
-            reply_markup=callback.message.reply_markup)
-    await callback.answer(text="WOW 2", show_alert=True)
 
 
 # Этот хендлер срабатывает на сообщения которые начинаются с точки. Пока фильтрую так
@@ -136,4 +119,19 @@ async def process_press_categories(callback: CallbackQuery):
         text=f"{LEXICON_RU['category_deleted']} {callback.data[:-3]}")
 
 
+@router.callback_query(ShowUsersCategories())
+async def process_choose_category(callback: CallbackQuery):
+    chosen_category = callback.data
+    await callback.message.edit_text(
+        text=f"{LEXICON_RU['start_work']} {chosen_category}{LEXICON_RU['stop_work']}",
+        reply_markup=create_stop_task_kb(chosen_category)
+    )
 
+
+@router.callback_query(F.data.startswith(LEXICON_RU["/stop"]))
+async def process_stop(callback: CallbackQuery):
+    await callback.message.answer(
+        text=LEXICON_RU['/stop'],
+        reply_markup=create_edit_category_kb(
+            *users_db[callback.from_user.id]['categories'])
+    )

@@ -15,6 +15,6 @@ async def send_message(message: Message):
 
 @router.callback_query()
 async def callback_query(callback: CallbackQuery):
-    text = callback.data[:-3]
+    text = callback.data
     cats = users_db[callback.from_user.id]['categories']
-    await callback.message.answer(f"{callback.data[-3:] == 'del'}, {text}, {cats}")
+    await callback.message.answer(f"{text}, {cats}")

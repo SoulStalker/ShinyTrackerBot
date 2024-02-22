@@ -9,3 +9,9 @@ class IsUsersCategories(BaseFilter):
     async def __call__(self, callback: CallbackQuery) -> bool:
         return (callback.data[-3:] == 'del'
                 and callback.data[:-3] in users_db[callback.from_user.id]['categories'])
+
+
+# Фильтр для отлова категорий в инлайне выбора категорий
+class ShowUsersCategories(BaseFilter):
+    async def __call__(self, callback: CallbackQuery) -> bool:
+        return callback.data in users_db[callback.from_user.id]['categories']
