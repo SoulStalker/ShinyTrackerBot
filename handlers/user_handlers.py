@@ -42,38 +42,38 @@ async def contacts_command(message: Message):
     await message.answer(text=LEXICON_RU['/contacts'], reply_markup=common_keyboard)
 
 
-@router.message(F.text == LEXICON_RU['add_category'])
-async def add_category(message: Message):
-    await message.answer(text=LEXICON_RU['/add_category'], reply_markup=common_keyboard)
+@router.callback_query(F.data == 'add_category')
+async def add_category(callback: CallbackQuery):
+    await callback.message.edit_text(text=LEXICON_RU['/add_category'], reply_markup=common_keyboard)
 
 
 # Этот хендлер срабатывает на нажатие кнопки "Редактировать категории"
 # в ответ выдается инлайн клавиатура с категориями
-@router.message(F.text == LEXICON_RU['edit_categories'])
-async def edit_categories(message: Message):
-    if users_db[message.from_user.id]['categories']:
-        await message.answer(
+@router.callback_query(F.data == 'edit_categories')
+async def edit_categories(callback: CallbackQuery):
+    if users_db[callback.from_user.id]['categories']:
+        await callback.message.edit_text(
             text=LEXICON_RU['/edit_categories'],
             reply_markup=create_edit_category_kb(
-                *users_db[message.from_user.id]['categories']
+                *users_db[callback.from_user.id]['categories']
             )
         )
     else:
-        await message.answer(text=LEXICON_RU['no_category'], reply_markup=common_keyboard)
+        await callback.answer(text=LEXICON_RU['no_category'], reply_markup=common_keyboard)
 
 
-@router.message(F.text == LEXICON_RU['choose_category'])
-async def choose_category(message: Message):
-    await message.answer(
+@router.callback_query(F.data == 'choose_category')
+async def choose_category(callback: CallbackQuery):
+    await callback.answer(
         text=LEXICON_RU['/choose_category'],
         reply_markup=create_categories_keyboard(
             2,
-            *users_db[message.from_user.id]['categories']))
+            *users_db[callback.from_user.id]['categories']))
 
 
-@router.message(F.text == LEXICON_RU['statistics'])
-async def statistics(message: Message):
-    await message.answer("Тут выводим статистику", reply_markup=common_keyboard)
+@router.callback_query(F.data == 'statistics')
+async def statistics(callback: CallbackQuery):
+    await callback.message.edit_text("Тут выводим статистику", reply_markup=common_keyboard)
 
 
 # Этот хендлер срабатывает на сообщения которые начинаются с точки. Пока фильтрую так
@@ -151,9 +151,10 @@ async def process_stop(callback: CallbackQuery):
 @router.callback_query(F.data == 'yes')
 async def process_yes(callback: CallbackQuery):
     await callback.message.edit_text(
-        text=LEXICON_RU['lets_start']
-    )
-    await callback.answer(
-        text=LEXICON_RU['yes'],
+        text=LEXICON_RU['lets_start'],
         reply_markup=common_keyboard
     )
+    # await callback.answer(
+    #     text=LEXICON_RU['yes'],
+    #     reply_markup=common_keyboard
+    # )
