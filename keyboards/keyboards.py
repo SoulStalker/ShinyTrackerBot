@@ -1,16 +1,7 @@
-from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from lexicon.lexicon import LEXICON_RU
-
-button_add_category = KeyboardButton(text=LEXICON_RU['add_category'])
-button_edit_categories = KeyboardButton(text=LEXICON_RU['edit_categories'])
-button_choose_category = KeyboardButton(text=LEXICON_RU['choose_category'])
-button_statistics = KeyboardButton(text=LEXICON_RU['statistics'])
-
-common_keyboard_builder = ReplyKeyboardBuilder()
-common_keyboard_builder.row(button_choose_category, button_add_category,
-                            button_edit_categories, button_statistics, width=2)
 
 
 # Function for generating inline keyboards "on the fly"
@@ -31,8 +22,15 @@ def create_categories_keyboard(width: int = 2, *args: str | set, **kwargs: str) 
                 text=text,
                 callback_data=button
             ))
+
     # Unpack the list with buttons into the builder using the row method with the width parameter
     kb_builder.row(*buttons, width=width)
+    kb_builder.row(
+        InlineKeyboardButton(
+            text=LEXICON_RU['cancel'],
+            callback_data='cancel'
+        )
+    )
     # Return the inline keyboard object
     return kb_builder.as_markup()
 
@@ -67,10 +65,6 @@ def create_common_keyboard(width: int = 2) -> InlineKeyboardMarkup:
 
 
 common_keyboard = create_common_keyboard(2)
-# common_keyboard: ReplyKeyboardMarkup = common_keyboard_builder.as_markup(
-#     one_time_keyboard=True,
-#     resize_keyboard=True
-# )
 
 
 def create_add_category_kb() -> InlineKeyboardMarkup:

@@ -34,17 +34,23 @@ async def help_command(message: Message):
 
 @router.message(Command('support'))
 async def support_command(message: Message):
-    await message.answer(text=LEXICON_RU['/support'], reply_markup=common_keyboard)
+    await message.answer(
+        text=LEXICON_RU['/support'],
+        reply_markup=common_keyboard)
 
 
 @router.message(Command('contacts'))
 async def contacts_command(message: Message):
-    await message.answer(text=LEXICON_RU['/contacts'], reply_markup=common_keyboard)
+    await message.answer(
+        text=LEXICON_RU['/contacts'],
+        reply_markup=common_keyboard)
 
 
 @router.callback_query(F.data == 'add_category')
 async def add_category(callback: CallbackQuery):
-    await callback.message.edit_text(text=LEXICON_RU['/add_category'], reply_markup=common_keyboard)
+    await callback.message.edit_text(
+        text=LEXICON_RU['/add_category'],
+        reply_markup=common_keyboard)
 
 
 # Этот хендлер срабатывает на нажатие кнопки "Редактировать категории"
@@ -59,12 +65,15 @@ async def edit_categories(callback: CallbackQuery):
             )
         )
     else:
-        await callback.answer(text=LEXICON_RU['no_category'], reply_markup=common_keyboard)
+        await callback.message.edit_text(
+            text=LEXICON_RU['no_category'],
+            reply_markup=common_keyboard)
 
 
+# Этот хендлер срабатывает на инлайн кнопку "Задача"
 @router.callback_query(F.data == 'choose_category')
 async def choose_category(callback: CallbackQuery):
-    await callback.answer(
+    await callback.message.edit_text(
         text=LEXICON_RU['/choose_category'],
         reply_markup=create_categories_keyboard(
             2,
@@ -73,7 +82,9 @@ async def choose_category(callback: CallbackQuery):
 
 @router.callback_query(F.data == 'statistics')
 async def statistics(callback: CallbackQuery):
-    await callback.message.edit_text("Тут выводим статистику", reply_markup=common_keyboard)
+    await callback.message.edit_text(
+        text="Тут выводим статистику",
+        reply_markup=common_keyboard)
 
 
 # Этот хендлер срабатывает на сообщения которые начинаются с точки. Пока фильтрую так
@@ -93,8 +104,10 @@ async def add_cat(message: Message):
 # Этот хендлер срабатывает на кнопку отмена в инлайне добавления категории
 @router.callback_query(F.data == 'cancel')
 async def process_cancel_press(callback: CallbackQuery):
-    await callback.message.edit_text(text=LEXICON_RU['/add_category'])
-    await callback.answer(reply_markup=common_keyboard)
+    await callback.message.edit_text(
+        text=LEXICON_RU['/add_category'],
+        reply_markup=common_keyboard
+    )
 
 
 # Этот хендлер срабатывает на кнопку добавить в инлайне добавления категории
@@ -103,7 +116,7 @@ async def process_really_add_press(callback: CallbackQuery):
     users_db[callback.from_user.id]['categories'].add(
         last_category
     )
-    await callback.message.answer(
+    await callback.message.edit_text(
         text=f"{LEXICON_RU['category added']} {last_category}\n"
              f"{LEXICON_RU['another category']}"
              f"{LEXICON_RU['/add_category']}",
@@ -137,14 +150,19 @@ async def process_choose_category(callback: CallbackQuery):
 # Этот хендлер срабатывает на нажатие остановки задачи
 @router.callback_query(IsStopTasks())
 async def process_stop(callback: CallbackQuery):
-    await callback.message.answer(
+    await callback.message.edit_text(
         text=LEXICON_RU['/choose_category'],
         reply_markup=create_categories_keyboard(
             2,
             *users_db[callback.from_user.id]['categories'])
     )
-    await callback.answer(
-        text=f"{LEXICON_RU['task for category']} {callback.data[:-5]} {LEXICON_RU['is stopped']}")
+    await callback.message.edit_text(
+        text=f"{LEXICON_RU['task for category']} {callback.data[:-5]} "
+             f"{LEXICON_RU['is stopped']}\n\n{LEXICON_RU['/choose_category']}",
+        reply_markup=create_categories_keyboard(
+            2,
+            *users_db[callback.from_user.id]['categories'])
+    )
 
 
 # Этот хендлер срабатывает на ответ "Да" в начале работы бота
@@ -154,7 +172,3 @@ async def process_yes(callback: CallbackQuery):
         text=LEXICON_RU['lets_start'],
         reply_markup=common_keyboard
     )
-    # await callback.answer(
-    #     text=LEXICON_RU['yes'],
-    #     reply_markup=common_keyboard
-    # )
