@@ -53,8 +53,8 @@ async def add_category(callback: CallbackQuery):
         reply_markup=common_keyboard)
 
 
-# Этот хендлер срабатывает на нажатие кнопки "Редактировать категории"
-# в ответ выдается инлайн клавиатура с категориями
+# Этот хендлер срабатывает на нажатие кнопки "Редактировать задачи"
+# в ответ выдается инлайн клавиатура с задачами
 @router.callback_query(F.data == 'edit_categories')
 async def edit_categories(callback: CallbackQuery):
     if users_db[callback.from_user.id]['categories']:
@@ -94,14 +94,14 @@ async def add_cat(message: Message):
     last_category = message.text[1:]
     if message.from_user.id in users_db.keys():
         await message.answer(
-            text=f'Добавляется категория {last_category}',
+            text=f'{LEXICON_RU["/ads_task"]} {last_category}',
             reply_markup=create_add_category_kb(),
         )
     else:
         await message.answer(text=LEXICON_RU['no_user'])
 
 
-# Этот хендлер срабатывает на кнопку отмена в инлайне добавления категории
+# Этот хендлер срабатывает на кнопку отмена в инлайне добавления задачи
 @router.callback_query(F.data == 'cancel')
 async def process_cancel_press(callback: CallbackQuery):
     await callback.message.edit_text(
@@ -110,7 +110,7 @@ async def process_cancel_press(callback: CallbackQuery):
     )
 
 
-# Этот хендлер срабатывает на кнопку добавить в инлайне добавления категории
+# Этот хендлер срабатывает на кнопку добавить в инлайне добавления задачи
 @router.callback_query(F.data == 'really_add')
 async def process_really_add_press(callback: CallbackQuery):
     users_db[callback.from_user.id]['categories'].add(
@@ -124,7 +124,7 @@ async def process_really_add_press(callback: CallbackQuery):
     )
 
 
-# Этот хендлер срабатывает на нажатие на категорию в инлайне редактирования категорий
+# Этот хендлер срабатывает на нажатие на задачу в инлайне редактирования задач
 @router.callback_query(IsUsersCategories())
 async def process_press_categories(callback: CallbackQuery):
     users_db[callback.from_user.id]['categories'].remove(callback.data[:-3])
@@ -137,7 +137,7 @@ async def process_press_categories(callback: CallbackQuery):
         text=f"{LEXICON_RU['category_deleted']} {callback.data[:-3]}")
 
 
-# Этот хендлер срабатывает на нажатие на категорию в списке и запускает работу по задаче
+# Этот хендлер срабатывает на нажатие на задачу в списке и запускает работу по задаче
 @router.callback_query(ShowUsersCategories())
 async def process_choose_category(callback: CallbackQuery):
     chosen_category = callback.data
