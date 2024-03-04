@@ -96,7 +96,7 @@ def create_edit_category_kb(*args: str) -> InlineKeyboardMarkup:
     kb_builder = InlineKeyboardBuilder()
     for button in sorted(args):
         kb_builder.row(InlineKeyboardButton(
-            text=button,
+            text=f'❌ {button}',
             callback_data=f'{button}del'
         ))
     kb_builder.row(
