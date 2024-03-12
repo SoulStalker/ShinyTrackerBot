@@ -1,15 +1,16 @@
-from copy import deepcopy
+from sqlalchemy import select
 
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message, CallbackQuery
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from keyboards.keyboards import (common_keyboard, create_categories_keyboard,
                                  create_add_category_kb, create_edit_category_kb,
                                  create_stop_task_kb, create_start_yes_no_kb)
 from lexicon.lexicon import LEXICON_RU
-from database.database import users_db, user_dict_template
-from database.models import Session, User
+from database.database import users_db
+from database.models import User
 from filters.filters import IsUsersCategories, ShowUsersCategories, IsStopTasks
 
 router = Router()
@@ -18,17 +19,19 @@ last_category = None
 
 # Этот хендлер срабатывает на команду /start и создает базу данных
 @router.message(CommandStart())
-async def start_command(message: Message, session: Session):
+async def start_command(message: Message, session: AsyncSession):
     await message.answer(
         text=LEXICON_RU['/start'],
         reply_markup=create_start_yes_no_kb())
-    user = session.query(User).filter_by(User.username == message.from_user.id).first()
+    query = select(User).where(User.username == message.from_user.id)
+    users = await session.execute(query)
+    user = users.scalars().first()
     if not user:
         user = User(
             username=message.from_user.id
         )
         session.add(user)
-        session.commit()
+        await session.commit()
 
 
 @router.message(Command('help'))

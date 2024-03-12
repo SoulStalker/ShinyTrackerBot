@@ -1,8 +1,7 @@
 import datetime
 
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 
 Base = declarative_base()
 
@@ -43,6 +42,3 @@ class Settings(Base):
     break_duration = Column(Integer, default=300)
 
 
-engine = create_engine('sqlite:///bot.db')
-Base.metadata.create_all(engine)
-Session = sessionmaker(bind=engine)

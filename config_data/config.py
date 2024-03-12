@@ -33,7 +33,7 @@ def load_config(path: str | None = None) -> Config:
             admin_ids=list(map(int, env.list('ADMIN_IDS'))),
         ),
         db=DatabaseConfig(
-            database=env('DATABASE'),
+            database=env('DB_URL'),
             db_host=env('DB_HOST'),
             db_user=env('DB_USER'),
             db_password=env('DB_PASSWORD'),
