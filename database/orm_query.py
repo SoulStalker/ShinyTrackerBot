@@ -26,3 +26,10 @@ async def orm_add_task(session: AsyncSession, data: dict) -> None:
     )
     session.add(obj)
     await session.commit()
+
+
+async def orm_get_tasks(session: AsyncSession, user_id: int) -> list[Task]:
+    query = select(Task.name).where(user_id == user_id)
+    tasks = await session.execute(query)
+    tasks = tasks.scalars().all()
+    return list(tasks)

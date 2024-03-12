@@ -14,7 +14,7 @@ from lexicon.lexicon import LEXICON_RU
 from database.database import users_db
 from database.models import User
 from filters.filters import IsUsersCategories, ShowUsersCategories, IsStopTasks
-from database.orm_query import orm_get_user_by_id, orm_add_user, orm_add_task
+from database.orm_query import orm_get_user_by_id, orm_add_user, orm_add_task, orm_get_tasks
 
 router = Router()
 last_category = None
@@ -77,12 +77,14 @@ async def edit_categories(callback: CallbackQuery):
 
 # Этот хендлер срабатывает на инлайн кнопку "Задача"
 @router.callback_query(F.data == 'choose_category')
-async def choose_category(callback: CallbackQuery):
+async def choose_category(callback: CallbackQuery, session: AsyncSession):
+    user = await orm_get_user_by_id(session, callback.from_user.id)
+    tasks = await orm_get_tasks(session, user.id)
     await callback.message.edit_text(
         text=LEXICON_RU['/choose_category'],
         reply_markup=create_categories_keyboard(
             2,
-            *users_db[callback.from_user.id]['categories']))
+            *tasks))
 
 
 @router.callback_query(F.data == 'statistics')
@@ -121,10 +123,6 @@ async def process_really_add_press(callback: CallbackQuery, session: AsyncSessio
     user = await orm_get_user_by_id(session, callback.from_user.id)
     task = {'user_id': user.id, 'task_name': last_category}
     await orm_add_task(session, task)
-
-    # users_db[callback.from_user.id]['categories'].add(
-    #     last_category
-    # )
     await callback.message.edit_text(
         text=f"{LEXICON_RU['category added']} {last_category}\n"
              f"{LEXICON_RU['another category']}"
