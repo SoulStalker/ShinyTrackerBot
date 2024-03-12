@@ -1,3 +1,5 @@
+from email import message
+
 from sqlalchemy import select
 
 from aiogram import F, Router
@@ -12,26 +14,20 @@ from lexicon.lexicon import LEXICON_RU
 from database.database import users_db
 from database.models import User
 from filters.filters import IsUsersCategories, ShowUsersCategories, IsStopTasks
+from database.orm_query import orm_get_user_by_id, orm_add_user, orm_add_task
 
 router = Router()
 last_category = None
 
 
-# Этот хендлер срабатывает на команду /start и создает базу данных
+# Этот хендлер срабатывает на команду /start и создает пользователя в базе данных
 @router.message(CommandStart())
 async def start_command(message: Message, session: AsyncSession):
     await message.answer(
         text=LEXICON_RU['/start'],
         reply_markup=create_start_yes_no_kb())
-    query = select(User).where(User.username == message.from_user.id)
-    users = await session.execute(query)
-    user = users.scalars().first()
-    if not user:
-        user = User(
-            username=message.from_user.id
-        )
-        session.add(user)
-        await session.commit()
+    if not await orm_get_user_by_id(session, message.from_user.id):
+        await orm_add_user(session, message.from_user.id)
 
 
 @router.message(Command('help'))
@@ -98,10 +94,10 @@ async def statistics(callback: CallbackQuery):
 
 # Этот хендлер срабатывает на сообщения которые начинаются с точки. Пока фильтрую так
 @router.message(lambda x: len(x.text) < 20 and x.text.startswith('.'))
-async def add_cat(message: Message):
+async def add_cat(message: Message, session: AsyncSession):
     global last_category
     last_category = message.text[1:]
-    if message.from_user.id in users_db.keys():
+    if await orm_get_user_by_id(session, message.from_user.id):
         await message.answer(
             text=f'{LEXICON_RU["/ads_task"]} {last_category}',
             reply_markup=create_add_category_kb(),
@@ -121,10 +117,14 @@ async def process_cancel_press(callback: CallbackQuery):
 
 # Этот хендлер срабатывает на кнопку добавить в инлайне добавления задачи
 @router.callback_query(F.data == 'really_add')
-async def process_really_add_press(callback: CallbackQuery):
-    users_db[callback.from_user.id]['categories'].add(
-        last_category
-    )
+async def process_really_add_press(callback: CallbackQuery, session: AsyncSession):
+    user = await orm_get_user_by_id(session, callback.from_user.id)
+    task = {'user_id': user.id, 'task_name': last_category}
+    await orm_add_task(session, task)
+
+    # users_db[callback.from_user.id]['categories'].add(
+    #     last_category
+    # )
     await callback.message.edit_text(
         text=f"{LEXICON_RU['category added']} {last_category}\n"
              f"{LEXICON_RU['another category']}"
