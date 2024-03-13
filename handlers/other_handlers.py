@@ -2,7 +2,6 @@ from aiogram import Router
 from aiogram.types import Message, CallbackQuery
 from lexicon.lexicon import LEXICON_RU
 
-from database.database import users_db
 
 router = Router()
 
@@ -16,5 +15,4 @@ async def send_message(message: Message):
 @router.callback_query()
 async def callback_query(callback: CallbackQuery):
     text = callback.data
-    cats = users_db[callback.from_user.id]['categories']
-    await callback.message.answer(f"{text}, {cats}")
+    await callback.message.answer(f"{text}")
