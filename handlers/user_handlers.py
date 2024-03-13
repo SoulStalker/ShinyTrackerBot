@@ -10,7 +10,8 @@ from lexicon.lexicon import LEXICON_RU
 from database.database import users_db
 from filters.filters import IsUsersCategories, ShowUsersCategories, IsStopTasks
 from database.orm_query import (orm_get_user_by_id, orm_add_user,
-                                orm_add_task, orm_get_tasks, orm_remove_task)
+                                orm_add_task, orm_get_tasks,
+                                orm_remove_task, orm_update_work, orm_stop_work)
 
 router = Router()
 last_category = None
@@ -145,31 +146,35 @@ async def process_press_categories(callback: CallbackQuery, session: AsyncSessio
 
 # Этот хендлер срабатывает на нажатие на задачу в списке и запускает работу по задаче
 @router.callback_query(ShowUsersCategories())
-async def process_choose_category(callback: CallbackQuery):
-    # todo надо переделать  под ОРМ
-    chosen_category = callback.data
+async def process_choose_category(callback: CallbackQuery, session: AsyncSession):
+    chosen_task = callback.data
+    user = await orm_get_user_by_id(session, callback.from_user.id)
+    await orm_update_work(session, chosen_task, user.id)
     await callback.message.edit_text(
-        text=f"{LEXICON_RU['start_work']} {chosen_category}{LEXICON_RU['stop_work']}",
-        reply_markup=create_stop_task_kb(chosen_category)
+        text=f"{LEXICON_RU['start_work']} {chosen_task}{LEXICON_RU['stop_work']}",
+        reply_markup=create_stop_task_kb(chosen_task)
     )
 
 
 # Этот хендлер срабатывает на нажатие остановки задачи
 # todo надо переделать под ОРМ
 @router.callback_query(IsStopTasks())
-async def process_stop(callback: CallbackQuery):
+async def process_stop(callback: CallbackQuery, session: AsyncSession):
+    user = await orm_get_user_by_id(session, callback.from_user.id)
+    tasks = await orm_get_tasks(session, user.id)
+    await orm_stop_work(session, user.id)
     await callback.message.edit_text(
         text=LEXICON_RU['/choose_category'],
         reply_markup=create_categories_keyboard(
             2,
-            *users_db[callback.from_user.id]['categories'])
+            *tasks)
     )
     await callback.message.edit_text(
         text=f"{LEXICON_RU['task for category']} {callback.data[:-5]} "
              f"{LEXICON_RU['is stopped']}\n\n{LEXICON_RU['/choose_category']}",
         reply_markup=create_categories_keyboard(
             2,
-            *users_db[callback.from_user.id]['categories'])
+            *tasks)
     )
 
 

@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
 from sqlalchemy.ext.declarative import declarative_base
@@ -19,7 +19,7 @@ class Task(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id'))
     name = Column(String)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class Works(Base):
@@ -28,8 +28,8 @@ class Works(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id'))
     task_id = Column(Integer, ForeignKey('tasks.id'))
-    start_time = Column(DateTime, default=datetime.datetime.utcnow)
-    end_time = Column(DateTime, default=datetime.datetime.utcnow)
+    start_time = Column(DateTime)
+    end_time = Column(DateTime)
     is_break = Column(Boolean, default=False)
 
 
