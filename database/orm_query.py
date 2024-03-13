@@ -2,6 +2,7 @@ from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models import User, Task
+from lexicon.lexicon import LEXICON_RU
 
 
 async def orm_get_user_by_id(session: AsyncSession, user_id: int) -> User:
@@ -33,3 +34,15 @@ async def orm_get_tasks(session: AsyncSession, user_id: int) -> list[Task]:
     tasks = await session.execute(query)
     tasks = tasks.scalars().all()
     return list(tasks)
+
+
+# Функция удаляет задачу из базы по названию
+async def orm_remove_task(session: AsyncSession, task_name: str) -> str:
+    success = LEXICON_RU['success']
+    try:
+        query = delete(Task).where(Task.name == task_name)
+        await session.execute(query)
+        await session.commit()
+    except Exception as e:
+        success = e
+    return success

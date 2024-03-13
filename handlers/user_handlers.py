@@ -9,7 +9,8 @@ from keyboards.keyboards import (common_keyboard, create_categories_keyboard,
 from lexicon.lexicon import LEXICON_RU
 from database.database import users_db
 from filters.filters import IsUsersCategories, ShowUsersCategories, IsStopTasks
-from database.orm_query import orm_get_user_by_id, orm_add_user, orm_add_task, orm_get_tasks
+from database.orm_query import (orm_get_user_by_id, orm_add_user,
+                                orm_add_task, orm_get_tasks, orm_remove_task)
 
 router = Router()
 last_category = None
@@ -56,12 +57,14 @@ async def add_category(callback: CallbackQuery):
 # Этот хендлер срабатывает на нажатие кнопки "Редактировать задачи"
 # в ответ выдается инлайн клавиатура с задачами
 @router.callback_query(F.data == 'edit_categories')
-async def edit_categories(callback: CallbackQuery):
-    if users_db[callback.from_user.id]['categories']:
+async def edit_categories(callback: CallbackQuery, session: AsyncSession):
+    user = await orm_get_user_by_id(session, callback.from_user.id)
+    tasks = await orm_get_tasks(session, user.id)
+    if tasks:
         await callback.message.edit_text(
             text=LEXICON_RU['/edit_categories'],
             reply_markup=create_edit_category_kb(
-                *users_db[callback.from_user.id]['categories']
+                *tasks
             )
         )
     else:
@@ -128,12 +131,13 @@ async def process_really_add_press(callback: CallbackQuery, session: AsyncSessio
 
 # Этот хендлер срабатывает на нажатие на задачу в инлайне редактирования задач
 @router.callback_query(IsUsersCategories())
-async def process_press_categories(callback: CallbackQuery):
-    users_db[callback.from_user.id]['categories'].remove(callback.data[:-3])
+async def process_press_categories(callback: CallbackQuery, session: AsyncSession):
+    user = await orm_get_user_by_id(session, callback.from_user.id)
+    await orm_remove_task(session, callback.data[:-3])
+    new_tasks = await orm_get_tasks(session, user.id)
     await callback.message.edit_text(
         text=LEXICON_RU['/edit_categories'],
-        reply_markup=create_edit_category_kb(
-            *users_db[callback.from_user.id]['categories'])
+        reply_markup=create_edit_category_kb(*new_tasks)
     )
     await callback.answer(
         text=f"{LEXICON_RU['category_deleted']} {callback.data[:-3]}")
@@ -142,6 +146,7 @@ async def process_press_categories(callback: CallbackQuery):
 # Этот хендлер срабатывает на нажатие на задачу в списке и запускает работу по задаче
 @router.callback_query(ShowUsersCategories())
 async def process_choose_category(callback: CallbackQuery):
+    # todo надо переделать  под ОРМ
     chosen_category = callback.data
     await callback.message.edit_text(
         text=f"{LEXICON_RU['start_work']} {chosen_category}{LEXICON_RU['stop_work']}",
@@ -150,6 +155,7 @@ async def process_choose_category(callback: CallbackQuery):
 
 
 # Этот хендлер срабатывает на нажатие остановки задачи
+# todo надо переделать под ОРМ
 @router.callback_query(IsStopTasks())
 async def process_stop(callback: CallbackQuery):
     await callback.message.edit_text(
