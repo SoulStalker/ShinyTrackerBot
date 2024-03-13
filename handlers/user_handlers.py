@@ -1,7 +1,3 @@
-from email import message
-
-from sqlalchemy import select
-
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message, CallbackQuery
@@ -12,7 +8,6 @@ from keyboards.keyboards import (common_keyboard, create_categories_keyboard,
                                  create_stop_task_kb, create_start_yes_no_kb)
 from lexicon.lexicon import LEXICON_RU
 from database.database import users_db
-from database.models import User
 from filters.filters import IsUsersCategories, ShowUsersCategories, IsStopTasks
 from database.orm_query import orm_get_user_by_id, orm_add_user, orm_add_task, orm_get_tasks
 

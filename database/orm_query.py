@@ -4,14 +4,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database.models import User, Task
 
 
-async def orm_get_user_by_id(session: AsyncSession, user_id: str) -> User:
+async def orm_get_user_by_id(session: AsyncSession, user_id: int) -> User:
     query = select(User).where(User.username == user_id)
     users = await session.execute(query)
     user = users.scalars().first()
     return user
 
 
-async def orm_add_user(session: AsyncSession, user_id: str) -> None:
+async def orm_add_user(session: AsyncSession, user_id: int) -> None:
     obj = User(
         username=user_id,
     )
