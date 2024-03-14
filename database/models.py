@@ -57,6 +57,30 @@ class Works(Base):
     def start_time_day(cls):
         return extract('day', cls.start_time)
 
+    @hybrid_property
+    def end_time_year(self):
+        return self.end_time.year
+
+    @end_time_year.expression
+    def end_time_year(cls):
+        return extract('year', cls.end_time)
+
+    @hybrid_property
+    def end_time_month(self):
+        return self.end_time.month
+
+    @end_time_month.expression
+    def end_time_month(cls):
+        return extract('month', cls.end_time)
+
+    @hybrid_property
+    def end_time_day(self):
+        return self.end_time.day
+
+    @end_time_day.expression
+    def end_time_day(cls):
+        return extract('day', cls.end_time)
+
 
 class Settings(Base):
     __tablename__ = 'settings'
@@ -65,5 +89,6 @@ class Settings(Base):
     user_id = Column(Integer, ForeignKey('users.id'))
     work_duration = Column(Integer, default=1500)
     break_duration = Column(Integer, default=300)
+
 
 

@@ -88,12 +88,11 @@ async def choose_category(callback: CallbackQuery, session: AsyncSession):
 
 
 @router.callback_query(F.data == 'statistics')
-# todo сделать вывод статистики
 async def statistics(callback: CallbackQuery, session: AsyncSession):
     user = await orm_get_user_by_id(session, callback.from_user.id)
-    stats = await orm_get_day_stats(session, user.id, 1)
+    stats = await orm_get_day_stats(session, user.id)
     await callback.message.edit_text(
-        text='Boom',
+        text=stats,
         reply_markup=common_keyboard)
 
 

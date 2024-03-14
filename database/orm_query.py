@@ -72,23 +72,8 @@ async def orm_update_work(session: AsyncSession, task_name: str, user_id: int) -
 # Так как не должно быть незаконченных задач сразу закрываем все незаконченные
 async def orm_stop_work(session: AsyncSession, user_id: int) -> None:
     query = (update(Works).where(
-        Works.user_id == user_id and Works.end_time is null).
+        (Works.user_id == user_id) & (Works.end_time == None)
+    ).
              values(end_time=datetime.utcnow()))
     await session.execute(query)
     await session.commit()
-
-
-# Функция получения статистики за период
-# async def orm_get_task_stats(session: AsyncSession, period: str, user_id: int):
-#     query = (select(
-#         Task.name,
-#         Works.start_time,
-#         Works.end_time,
-#     ).join(Task, Task.id == Works.task_id).order_by(Task.name).
-#              where(
-#         Works.user_id == user_id,
-#     ))
-#
-#     result = await session.execute(query.filter(extract('day', Works.start_time) >= datetime.today().day))
-#     return result
-
