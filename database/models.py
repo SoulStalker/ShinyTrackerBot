@@ -1,7 +1,8 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, extract
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.hybrid import hybrid_property
 
 Base = declarative_base()
 
@@ -31,6 +32,30 @@ class Works(Base):
     start_time = Column(DateTime)
     end_time = Column(DateTime)
     is_break = Column(Boolean, default=False)
+
+    @hybrid_property
+    def start_time_year(self):
+        return self.start_time.year
+
+    @start_time_year.expression
+    def start_time_year(cls):
+        return extract('year', cls.start_time)
+
+    @hybrid_property
+    def start_time_month(self):
+        return self.start_time.month
+
+    @start_time_month.expression
+    def start_time_month(cls):
+        return extract('month', cls.start_time)
+
+    @hybrid_property
+    def start_time_day(self):
+        return self.start_time.day
+
+    @start_time_day.expression
+    def start_time_day(cls):
+        return extract('day', cls.start_time)
 
 
 class Settings(Base):

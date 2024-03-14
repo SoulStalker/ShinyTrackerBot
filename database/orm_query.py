@@ -1,7 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from sqlalchemy import select, update, delete, null
+from sqlalchemy import select, update, delete, null, extract, func, case, cast, String
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.functions import coalesce
 
 from database.models import User, Task, Works
 from lexicon.lexicon import LEXICON_RU
@@ -75,3 +76,19 @@ async def orm_stop_work(session: AsyncSession, user_id: int) -> None:
              values(end_time=datetime.utcnow()))
     await session.execute(query)
     await session.commit()
+
+
+# Функция получения статистики за период
+# async def orm_get_task_stats(session: AsyncSession, period: str, user_id: int):
+#     query = (select(
+#         Task.name,
+#         Works.start_time,
+#         Works.end_time,
+#     ).join(Task, Task.id == Works.task_id).order_by(Task.name).
+#              where(
+#         Works.user_id == user_id,
+#     ))
+#
+#     result = await session.execute(query.filter(extract('day', Works.start_time) >= datetime.today().day))
+#     return result
+

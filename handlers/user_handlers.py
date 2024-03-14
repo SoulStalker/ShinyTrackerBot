@@ -10,7 +10,9 @@ from lexicon.lexicon import LEXICON_RU
 from filters.filters import IsUsersCategories, ShowUsersCategories, IsStopTasks
 from database.orm_query import (orm_get_user_by_id, orm_add_user,
                                 orm_add_task, orm_get_tasks,
-                                orm_remove_task, orm_update_work, orm_stop_work)
+                                orm_remove_task, orm_update_work,
+                                orm_stop_work,)
+from services.services import orm_get_day_stats
 
 router = Router()
 last_category = None
@@ -86,9 +88,12 @@ async def choose_category(callback: CallbackQuery, session: AsyncSession):
 
 
 @router.callback_query(F.data == 'statistics')
-async def statistics(callback: CallbackQuery):
+# todo сделать вывод статистики
+async def statistics(callback: CallbackQuery, session: AsyncSession):
+    user = await orm_get_user_by_id(session, callback.from_user.id)
+    stats = await orm_get_day_stats(session, user.id, 1)
     await callback.message.edit_text(
-        text="Тут выводим статистику",
+        text='Boom',
         reply_markup=common_keyboard)
 
 
@@ -156,7 +161,6 @@ async def process_choose_category(callback: CallbackQuery, session: AsyncSession
 
 
 # Этот хендлер срабатывает на нажатие остановки задачи
-# todo надо переделать под ОРМ
 @router.callback_query(IsStopTasks())
 async def process_stop(callback: CallbackQuery, session: AsyncSession):
     user = await orm_get_user_by_id(session, callback.from_user.id)
