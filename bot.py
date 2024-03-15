@@ -1,6 +1,8 @@
 import asyncio
 
 from aiogram import Bot, Dispatcher
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.storage.memory import MemoryStorage
 
 from config_data.config import load_config
 from keyboards.set_menu import set_main_menu
@@ -10,11 +12,19 @@ from database.enginge import drop_tables, create_tables, session_maker
 
 # SUPER_ADMIN = config.tg_bot.admin_ids[0]
 
+storage = MemoryStorage()
+
+
+# todo надо будет перенести либо в сервисы либо в отдельный модуль
+# класс для состояний
+class FSMGetTaskName(StatesGroup):
+    fill_task_name = State()
+
 
 async def main():
     config = load_config('.env')
     bot = Bot(token=config.tg_bot.token, parse_mode="HTML")
-    dp = Dispatcher()
+    dp = Dispatcher(storage=storage)
     await set_main_menu(bot)
     # # Создаем базу
     # await drop_tables()

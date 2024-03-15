@@ -1,5 +1,7 @@
 from aiogram import F, Router
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import Command, CommandStart, StateFilter
+from aiogram.fsm import state
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,9 +15,10 @@ from database.orm_query import (orm_get_user_by_id, orm_add_user,
                                 orm_remove_task, orm_update_work,
                                 orm_stop_work,)
 from services.services import orm_get_day_stats
+from bot import FSMGetTaskName
 
 router = Router()
-last_category = None
+new_task_name = None
 
 
 # Этот хендлер срабатывает на команду /start и создает пользователя в базе данных
@@ -50,10 +53,11 @@ async def contacts_command(message: Message):
 
 
 @router.callback_query(F.data == 'add_category')
-async def add_category(callback: CallbackQuery):
+async def add_category(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
         text=LEXICON_RU['/add_category'],
         reply_markup=common_keyboard)
+    await state.set_state(FSMGetTaskName.fill_task_name)
 
 
 # Этот хендлер срабатывает на нажатие кнопки "Редактировать задачи"
@@ -96,40 +100,51 @@ async def statistics(callback: CallbackQuery, session: AsyncSession):
         reply_markup=common_keyboard)
 
 
-# Этот хендлер срабатывает на сообщения которые начинаются с точки. Пока фильтрую так
-@router.message(lambda x: len(x.text) < 20 and x.text.startswith('.'))
-async def add_cat(message: Message, session: AsyncSession):
-    global last_category
-    last_category = message.text[1:]
+# Этот хендлер срабатывает на сообщения в FSM состоянии fill_task_name
+@router.message(StateFilter(FSMGetTaskName.fill_task_name), F.text.isalpha())
+async def add_cat(message: Message, session: AsyncSession, state: FSMContext):
+    global new_task_name
+    await state.update_data(task_name=message.text)
+    state_data = await state.get_data()
+    new_task_name = state_data['task_name']
     if await orm_get_user_by_id(session, message.from_user.id):
         await message.answer(
-            text=f'{LEXICON_RU["/ads_task"]} {last_category}',
+            text=f'{LEXICON_RU["/ads_task"]} {new_task_name}',
             reply_markup=create_add_category_kb(),
         )
     else:
         await message.answer(text=LEXICON_RU['no_user'])
 
 
-# Этот хендлер срабатывает на кнопку отмена в инлайне добавления задачи
+# Этот хендлер срабатывает на кнопку отмена в инлайне добавления задачи в FSM состоянии fill_task_name
 @router.callback_query(F.data == 'cancel')
-async def process_cancel_press(callback: CallbackQuery):
+async def process_cancel_press(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
         text=LEXICON_RU['/add_category'],
         reply_markup=common_keyboard
     )
+    await state.clear()
 
 
-# Этот хендлер срабатывает на кнопку добавить в инлайне добавления задачи
-@router.callback_query(F.data == 'really_add')
-async def process_really_add_press(callback: CallbackQuery, session: AsyncSession):
+# Этот хендлер срабатывает на кнопку добавить в инлайне добавления задачи в FSM состоянии fill_task_name
+@router.callback_query(StateFilter(FSMGetTaskName.fill_task_name), F.data == 'really_add')
+async def process_really_add_press(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
     user = await orm_get_user_by_id(session, callback.from_user.id)
-    task = {'user_id': user.id, 'task_name': last_category}
+    task = {'user_id': user.id, 'task_name': new_task_name}
+    # todo добавить проверку наличия такой задачи
     await orm_add_task(session, task)
     await callback.message.edit_text(
-        text=f"{LEXICON_RU['category added']} {last_category}\n"
-             f"{LEXICON_RU['another category']}"
-             f"{LEXICON_RU['/add_category']}",
+        text=f"{LEXICON_RU['category added']} {new_task_name}\n",
         reply_markup=common_keyboard
+    )
+    await state.clear()
+
+
+# Этот хендлер срабатывает на ввод некорректных данных в состоянии в FSM состоянии fill_task_name
+@router.message(StateFilter(FSMGetTaskName.fill_task_name))
+async def warning_incorrect_task(message: Message):
+    await message.answer(
+        text=LEXICON_RU['incorrect_task_name']
     )
 
 

@@ -4,7 +4,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models import Works, Task
-# todo тут пусть будет работа со статистикой
 
 
 # Функция возвращает статистику за день если период 0 то за сегодня если есть цифра то с этой даты
@@ -50,4 +49,6 @@ async def get_formatted_time(delta: timedelta) -> str:
 
     return formatted_time
 
+# todo надо добавить статиситку по дням неделям и месяцу
 
+# todo добавить оповещение

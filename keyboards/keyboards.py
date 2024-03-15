@@ -137,3 +137,5 @@ def create_start_yes_no_kb() -> InlineKeyboardMarkup:
         callback_data='cancel'
     ))
     return kb_builder.as_markup()
+
+# todo надо добавить клавитуру для статисткик по дням неделям и месяцу
