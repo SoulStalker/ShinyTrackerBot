@@ -19,7 +19,7 @@ class Task(Base):
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id'))
-    name = Column(String)
+    name = Column(String, unique=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 

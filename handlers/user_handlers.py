@@ -131,13 +131,16 @@ async def process_cancel_press(callback: CallbackQuery, state: FSMContext):
 async def process_really_add_press(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
     user = await orm_get_user_by_id(session, callback.from_user.id)
     task = {'user_id': user.id, 'task_name': new_task_name}
-    # todo добавить проверку наличия такой задачи
-    await orm_add_task(session, task)
-    await callback.message.edit_text(
-        text=f"{LEXICON_RU['category added']} {new_task_name}\n",
-        reply_markup=common_keyboard
-    )
-    await state.clear()
+    if new_task_name in await orm_get_tasks(session, user.id):
+        await callback.message.edit_text(LEXICON_RU['task_exist'])
+        # todo добавить правильный выход из состояния FSM fill_task_name при отмене
+    else:
+        await orm_add_task(session, task)
+        await callback.message.edit_text(
+            text=f"{LEXICON_RU['category added']} {new_task_name}\n",
+            reply_markup=common_keyboard
+        )
+        await state.clear()
 
 
 # Этот хендлер срабатывает на ввод некорректных данных в состоянии в FSM состоянии fill_task_name
