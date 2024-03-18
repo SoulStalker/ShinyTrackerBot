@@ -120,7 +120,7 @@ async def add_cat(message: Message, session: AsyncSession, state: FSMContext):
 @router.callback_query(F.data == 'cancel')
 async def process_cancel_press(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
-        text=LEXICON_RU['/add_category'],
+        text=LEXICON_RU['choose_action'],
         reply_markup=common_keyboard
     )
     await state.clear()
