@@ -4,9 +4,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from keyboards.keyboards import (common_keyboard, create_categories_keyboard,
-                                 create_add_category_kb, create_edit_category_kb,
-                                 create_stop_task_kb, create_start_yes_no_kb, create_stats_kb)
+from keyboards.keyboards import (common_keyboard, create_categories_keyboard, create_add_category_kb,
+                                 create_edit_category_kb, create_stop_task_kb, create_start_yes_no_kb,
+                                 create_stats_kb, create_cancel_kb)
 from lexicon.lexicon import LEXICON_RU
 from filters.filters import IsUsersCategories, ShowUsersCategories, IsStopTasks
 from database.orm_query import (orm_get_user_by_id, orm_add_user,
@@ -55,7 +55,7 @@ async def contacts_command(message: Message):
 async def add_category(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
         text=LEXICON_RU['/add_category'],
-        reply_markup=common_keyboard)
+        reply_markup=create_cancel_kb())
     await state.set_state(FSMGetTaskName.fill_task_name)
 
 
@@ -143,7 +143,6 @@ async def process_really_add_press(callback: CallbackQuery, session: AsyncSessio
     task = {'user_id': user.id, 'task_name': new_task_name}
     if new_task_name in await orm_get_tasks(session, user.id):
         await callback.message.edit_text(LEXICON_RU['task_exist'])
-        # todo добавить правильный выход из состояния FSM fill_task_name при отмене
     else:
         await orm_add_task(session, task)
         await callback.message.edit_text(
@@ -157,7 +156,8 @@ async def process_really_add_press(callback: CallbackQuery, session: AsyncSessio
 @router.message(StateFilter(FSMGetTaskName.fill_task_name))
 async def warning_incorrect_task(message: Message):
     await message.answer(
-        text=LEXICON_RU['incorrect_task_name']
+        text=LEXICON_RU['incorrect_task_name'],
+        reply_markup=create_cancel_kb(),
     )
 
 

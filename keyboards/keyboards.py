@@ -169,3 +169,16 @@ def create_stats_kb(width: int = 4) -> InlineKeyboardMarkup:
             callback_data='cancel'
     ))
     return kb_builder.as_markup()
+
+
+def create_cancel_kb() -> InlineKeyboardMarkup:
+    """
+    Функция создает клавиатуру с одной кнопкой "Отмена"
+    :return: InlineKeyboardMarkup
+    """
+    kb_builder = InlineKeyboardBuilder()
+    kb_builder.add(InlineKeyboardButton(
+        text=LEXICON_RU['cancel'],
+        callback_data='cancel'
+    ))
+    return kb_builder.as_markup()
