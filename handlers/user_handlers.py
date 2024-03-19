@@ -1,13 +1,12 @@
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart, StateFilter
-from aiogram.fsm import state
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from keyboards.keyboards import (common_keyboard, create_categories_keyboard,
                                  create_add_category_kb, create_edit_category_kb,
-                                 create_stop_task_kb, create_start_yes_no_kb)
+                                 create_stop_task_kb, create_start_yes_no_kb, create_stats_kb)
 from lexicon.lexicon import LEXICON_RU
 from filters.filters import IsUsersCategories, ShowUsersCategories, IsStopTasks
 from database.orm_query import (orm_get_user_by_id, orm_add_user,
@@ -91,13 +90,24 @@ async def choose_category(callback: CallbackQuery, session: AsyncSession):
             *tasks))
 
 
+# Этот хендлер срабатывает на нажатие кнопки статистики и возвращает клавиатуру с периодами
 @router.callback_query(F.data == 'statistics')
-async def statistics(callback: CallbackQuery, session: AsyncSession):
+async def statistics(callback: CallbackQuery):
+    await callback.message.edit_text(
+        # ,
+        text=LEXICON_RU['stats'],
+        reply_markup=create_stats_kb(width=2))
+
+
+# Этот хендлер срабатывает на нажатие кнопки day, то есть выводит статистику ща сегодня
+@router.callback_query(F.data == 'day')
+async def process_day_statistics(callback: CallbackQuery, session: AsyncSession):
     user = await orm_get_user_by_id(session, callback.from_user.id)
     stats = await orm_get_day_stats(session, user.id)
     await callback.message.edit_text(
         text=stats,
-        reply_markup=common_keyboard)
+        reply_markup=create_stats_kb()
+    )
 
 
 # Этот хендлер срабатывает на сообщения в FSM состоянии fill_task_name

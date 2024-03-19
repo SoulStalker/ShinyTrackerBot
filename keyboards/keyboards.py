@@ -138,4 +138,34 @@ def create_start_yes_no_kb() -> InlineKeyboardMarkup:
     ))
     return kb_builder.as_markup()
 
-# todo надо добавить клавитуру для статисткик по дням неделям и месяцу
+
+def create_stats_kb(width: int = 4) -> InlineKeyboardMarkup:
+    """
+    Функция создает клавиатуру для вывода статистки
+    по различным периодам
+    :return: InlineKeyboardMarkup
+    """
+    kb_builder = InlineKeyboardBuilder()
+    kb_builder.row(
+        InlineKeyboardButton(
+            text=LEXICON_RU['day'],
+            callback_data='day'),
+        InlineKeyboardButton(
+            text=LEXICON_RU['yesterday'],
+            callback_data='yesterday'),
+        InlineKeyboardButton(
+            text=LEXICON_RU['week'],
+            callback_data='week'
+        ),
+        InlineKeyboardButton(
+            text=LEXICON_RU['month'],
+            callback_data='month'
+        ),
+        width=width
+    )
+    kb_builder.row(
+        InlineKeyboardButton(
+            text=LEXICON_RU['cancel'],
+            callback_data='cancel'
+    ))
+    return kb_builder.as_markup()
