@@ -8,7 +8,7 @@ from keyboards.keyboards import (common_keyboard, create_categories_keyboard, cr
                                  create_edit_category_kb, create_stop_task_kb, create_start_yes_no_kb,
                                  create_stats_kb, create_cancel_kb)
 from lexicon.lexicon import LEXICON_RU
-from filters.filters import IsUsersCategories, ShowUsersCategories, IsStopTasks
+from filters.filters import IsUsersCategories, ShowUsersCategories, IsStopTasks, IsInPeriods
 from database.orm_query import (orm_get_user_by_id, orm_add_user,
                                 orm_add_task, orm_get_tasks,
                                 orm_remove_task, orm_update_work,
@@ -99,13 +99,13 @@ async def statistics(callback: CallbackQuery):
         reply_markup=create_stats_kb(width=2))
 
 
-# Этот хендлер срабатывает на нажатие кнопки day, то есть выводит статистику ща сегодня
-@router.callback_query(F.data == 'day')
-async def process_day_statistics(callback: CallbackQuery, session: AsyncSession):
+# Этот хендлер срабатывает на нажатие кнопки month, то есть выводит статистику за месяц
+@router.callback_query(IsInPeriods())
+async def process_yesterday_statistics(callback: CallbackQuery, session: AsyncSession):
     user = await orm_get_user_by_id(session, callback.from_user.id)
-    stats = await orm_get_day_stats(session, user.id)
+    stats = await orm_get_day_stats(session, user.id, callback.data)
     await callback.message.edit_text(
-        text=stats,
+        text=f"{LEXICON_RU['stats_for']} {LEXICON_RU[callback.data].lower()}\n\n{stats}",
         reply_markup=create_stats_kb()
     )
 

@@ -29,3 +29,10 @@ class IsStopTasks(BaseFilter):
         tasks = await orm_get_tasks(session, user.id)
         return (callback.data[-5:] == '_stop'
                 and callback.data[:-5] in tasks)
+
+
+# Фильтр для статистики по периодам
+class IsInPeriods(BaseFilter):
+    async def __call__(self, callback: CallbackQuery) -> bool:
+        periods = ('month', 'week', 'yesterday', 'day')
+        return callback.data in periods

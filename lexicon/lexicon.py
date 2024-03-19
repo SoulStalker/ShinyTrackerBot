@@ -52,4 +52,5 @@ LEXICON_RU: dict[str, str] = {
     'yesterday': 'Вчера',
     'week': 'Неделя',
     'month': 'Месяц',
+    'stats_for': 'Статистика за ',
 }

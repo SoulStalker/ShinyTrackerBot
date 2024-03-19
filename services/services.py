@@ -9,20 +9,51 @@ from lexicon.lexicon import LEXICON_RU
 
 # Функция возвращает статистику за день если период 0 то за сегодня если есть цифра то с этой даты
 # пока сделал чтобы только за один день,
-async def orm_get_day_stats(session: AsyncSession, user_id: int, period: int = 0):
+async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str = 'day', days: int = 0):
     query = (select(
         Task.name,
         Works.start_time,
         Works.end_time,
     ).join(Task, Task.id == Works.task_id).order_by(Task.name).
-             where(
+    where(
         Works.user_id == user_id,
-    ))
-    # Фильтр по дате где дата больше или равно текущий год, месяц, день
-    stats = await session.execute(query.filter(
-        Works.start_time_year == datetime.today().year and datetime.today().month == Works.end_time_year,
-        Works.start_time_month == datetime.today().month and datetime.today().month == Works.end_time_month,
-        Works.start_time_day == (datetime.today().day - period) and (datetime.today().day - period) == Works.end_time_day))
+        ))
+    # Фильтр по дате, где дата больше или равно текущий год, месяц, день
+    today = datetime.today()
+    if period == 'day':
+        start_of_day = datetime(today.year, today.month, today.day, 0, 0, 0)  # Начало текущего дня
+        end_of_day = datetime(today.year, today.month, today.day, 23, 59, 59)  # Конец текущего дня
+
+        stats_query = query.filter(
+            Works.start_time >= start_of_day,
+            Works.end_time <= end_of_day
+        )
+    elif period == 'yesterday':
+        yesterday = today - timedelta(days=1)
+
+        start_of_yesterday = datetime(yesterday.year, yesterday.month, yesterday.day, 0, 0, 0)  # Начало вчерашнего дня
+        end_of_yesterday = datetime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59)  # Конец вчерашнего дня
+
+        stats_query = query.filter(
+            Works.start_time >= start_of_yesterday,
+            Works.end_time <= end_of_yesterday
+        )
+    elif period == 'week':
+        start_of_week = today - timedelta(days=today.weekday())
+        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        stats_query = query.filter(
+            Works.start_time >= start_of_week,
+            Works.end_time <= datetime.today()
+        )
+    else:
+        start_of_month = datetime(today.year, today.month, 1)
+        stats_query = query.filter(
+            Works.start_time >= start_of_month,
+            Works.end_time <= datetime.today()
+        )
+
+    stats = await session.execute(stats_query)
 
     return_message = ''
     result = {}
@@ -52,8 +83,5 @@ async def get_formatted_time(delta: timedelta) -> str:
 
     return formatted_time
 
-# todo надо добавить статистку по дням неделям и месяцу
-
 # todo добавить оповещение
-
 # todo добавить очистку чата
