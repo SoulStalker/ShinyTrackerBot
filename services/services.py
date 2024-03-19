@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models import Works, Task
+from lexicon.lexicon import LEXICON_RU
 
 
 # Функция возвращает статистику за день если период 0 то за сегодня если есть цифра то с этой даты
@@ -32,10 +33,12 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: int = 0
             result[key] += time_diff
         else:
             result[key] = time_diff
+    # Добавляем итоговое значение для всех задач
+    result.setdefault(LEXICON_RU['total'], sum(result.values(), timedelta()))
 
     for k, v in result.items():
         print(k, v)
-        return_message += f'{k} - {await get_formatted_time(v)}\n'
+        return_message += f'{k}: {await get_formatted_time(v)}\n'
     return return_message
 
 
