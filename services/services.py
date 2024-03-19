@@ -56,6 +56,4 @@ async def get_formatted_time(delta: timedelta) -> str:
 
 # todo добавить оповещение
 
-# todo добавить итоговые цифры в статистике
-
 # todo добавить очистку чата
