@@ -9,7 +9,7 @@ from lexicon.lexicon import LEXICON_RU
 
 # Функция возвращает статистику за день если период 0 то за сегодня если есть цифра то с этой даты
 # пока сделал чтобы только за один день,
-async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str = 'day', days: int = 0):
+async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
     query = (select(
         Task.name,
         Works.start_time,
@@ -20,7 +20,7 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str = '
         ))
     # Фильтр по дате, где дата больше или равно текущий год, месяц, день
     today = datetime.today()
-    if period == 'day':
+    if period == 'today':
         start_of_day = datetime(today.year, today.month, today.day, 0, 0, 0)  # Начало текущего дня
         end_of_day = datetime(today.year, today.month, today.day, 23, 59, 59)  # Конец текущего дня
 

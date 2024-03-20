@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from keyboards.keyboards import (common_keyboard, create_categories_keyboard, create_add_category_kb,
                                  create_edit_category_kb, create_stop_task_kb, create_start_yes_no_kb,
-                                 create_stats_kb, create_cancel_kb)
+                                 create_stats_kb, create_cancel_kb, create_del_or_edit_tasks_kb)
 from lexicon.lexicon import LEXICON_RU
 from filters.filters import IsUsersCategories, ShowUsersCategories, IsStopTasks, IsInPeriods
 from database.orm_query import (orm_get_user_by_id, orm_add_user,
@@ -60,9 +60,19 @@ async def add_category(callback: CallbackQuery, state: FSMContext):
 
 
 # Этот хендлер срабатывает на нажатие кнопки "Редактировать задачи"
-# в ответ выдается инлайн клавиатура с задачами
+# в ответ выдается инлайн клавиатура с вопросами удалить или изменить задачу
 @router.callback_query(F.data == 'edit_categories')
 async def edit_categories(callback: CallbackQuery, session: AsyncSession):
+    await callback.message.edit_text(
+        text=LEXICON_RU['del_or_edit_task'],
+        reply_markup=create_del_or_edit_tasks_kb()
+    )
+
+
+# Этот хендлер срабатывает на нажатие кнопки "Удалить задачи"
+# в ответ выдается инлайн клавиатура с задачами
+@router.callback_query(F.data == 'del_task')
+async def del_task(callback: CallbackQuery, session: AsyncSession):
     user = await orm_get_user_by_id(session, callback.from_user.id)
     tasks = await orm_get_tasks(session, user.id)
     if tasks:

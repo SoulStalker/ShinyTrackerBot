@@ -46,7 +46,7 @@ def create_common_keyboard(width: int = 2) -> InlineKeyboardMarkup:
         InlineKeyboardButton(
             text=LEXICON_RU['add_category'],
             callback_data='add_category'
-            ),
+        ),
         InlineKeyboardButton(
             text=LEXICON_RU['edit_categories'],
             callback_data='edit_categories'
@@ -148,8 +148,8 @@ def create_stats_kb(width: int = 4) -> InlineKeyboardMarkup:
     kb_builder = InlineKeyboardBuilder()
     kb_builder.row(
         InlineKeyboardButton(
-            text=LEXICON_RU['day'],
-            callback_data='day'),
+            text=LEXICON_RU['today'],
+            callback_data='today'),
         InlineKeyboardButton(
             text=LEXICON_RU['yesterday'],
             callback_data='yesterday'),
@@ -167,7 +167,7 @@ def create_stats_kb(width: int = 4) -> InlineKeyboardMarkup:
         InlineKeyboardButton(
             text=LEXICON_RU['cancel'],
             callback_data='cancel'
-    ))
+        ))
     return kb_builder.as_markup()
 
 
@@ -178,6 +178,27 @@ def create_cancel_kb() -> InlineKeyboardMarkup:
     """
     kb_builder = InlineKeyboardBuilder()
     kb_builder.add(InlineKeyboardButton(
+        text=LEXICON_RU['cancel'],
+        callback_data='cancel'
+    ))
+    return kb_builder.as_markup()
+
+
+def create_del_or_edit_tasks_kb() -> InlineKeyboardMarkup:
+    """
+    Функция создает клавиатуру с вопросами удалять или изменять задачи
+    :return: InlineKeyboardMarkup
+    """
+    kb_builder = InlineKeyboardBuilder()
+    kb_builder.row(
+        InlineKeyboardButton(
+            text=LEXICON_RU['del_task'],
+            callback_data='del_task'),
+        InlineKeyboardButton(
+            text=LEXICON_RU['edit_task'],
+            callback_data='edit_task')
+        )
+    kb_builder.row(InlineKeyboardButton(
         text=LEXICON_RU['cancel'],
         callback_data='cancel'
     ))
