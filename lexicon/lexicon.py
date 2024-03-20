@@ -56,4 +56,5 @@ LEXICON_RU: dict[str, str] = {
     'del_task': '🗑 Удалить',
     'edit_task': '✏️ Изменить',
     'del_or_edit_task': 'Удалить задачу или изменить?\n',
+    'task_edited': 'Задача изменена',
 }

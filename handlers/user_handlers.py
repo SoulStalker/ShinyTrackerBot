@@ -5,14 +5,14 @@ from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from keyboards.keyboards import (common_keyboard, create_categories_keyboard, create_add_category_kb,
-                                 create_edit_category_kb, create_stop_task_kb, create_start_yes_no_kb,
-                                 create_stats_kb, create_cancel_kb, create_del_or_edit_tasks_kb)
+                                 create_del_tasks_kb, create_stop_task_kb, create_start_yes_no_kb,
+                                 create_stats_kb, create_cancel_kb, create_del_or_edit_tasks_kb,
+                                 create_edit_tasks_kb)
 from lexicon.lexicon import LEXICON_RU
-from filters.filters import IsUsersCategories, ShowUsersCategories, IsStopTasks, IsInPeriods
-from database.orm_query import (orm_get_user_by_id, orm_add_user,
-                                orm_add_task, orm_get_tasks,
-                                orm_remove_task, orm_update_work,
-                                orm_stop_work,)
+from filters.filters import (IsUsersDelCategories, ShowUsersCategories, IsStopTasks, IsInPeriods,
+                             IsUsersEditCategories)
+from database.orm_query import (orm_get_user_by_id, orm_add_user, orm_add_task, orm_get_tasks,
+                                orm_remove_task, orm_update_work, orm_stop_work, orm_edit_task)
 from services.services import orm_get_day_stats
 from bot import FSMGetTaskName
 
@@ -78,7 +78,7 @@ async def del_task(callback: CallbackQuery, session: AsyncSession):
     if tasks:
         await callback.message.edit_text(
             text=LEXICON_RU['/edit_categories'],
-            reply_markup=create_edit_category_kb(
+            reply_markup=create_del_tasks_kb(
                 *tasks
             )
         )
@@ -86,6 +86,26 @@ async def del_task(callback: CallbackQuery, session: AsyncSession):
         await callback.message.edit_text(
             text=LEXICON_RU['no_category'],
             reply_markup=common_keyboard)
+
+
+# Этот хендлер срабатывает на нажатие кнопки "Изменить задачи"
+# в ответ выдается инлайн клавиатура с задачами
+@router.callback_query(F.data == 'edit_task')
+async def del_task(callback: CallbackQuery, session: AsyncSession):
+    user = await orm_get_user_by_id(session, callback.from_user.id)
+    tasks = await orm_get_tasks(session, user.id)
+    if tasks:
+        await callback.message.edit_text(
+            text=LEXICON_RU['/edit_categories'],
+            reply_markup=create_edit_tasks_kb(
+                *tasks
+            )
+        )
+    else:
+        await callback.message.edit_text(
+            text=LEXICON_RU['no_category'],
+            reply_markup=common_keyboard)
+
 
 
 # Этот хендлер срабатывает на инлайн кнопку "Задача"
@@ -171,18 +191,34 @@ async def warning_incorrect_task(message: Message):
     )
 
 
-# Этот хендлер срабатывает на нажатие на задачу в инлайне редактирования задач
-@router.callback_query(IsUsersCategories())
+# Этот хендлер срабатывает на нажатие на задачу в инлайне удаление задач
+@router.callback_query(IsUsersDelCategories())
 async def process_press_categories(callback: CallbackQuery, session: AsyncSession):
     user = await orm_get_user_by_id(session, callback.from_user.id)
     await orm_remove_task(session, callback.data[:-3])
     new_tasks = await orm_get_tasks(session, user.id)
     await callback.message.edit_text(
         text=LEXICON_RU['/edit_categories'],
-        reply_markup=create_edit_category_kb(*new_tasks)
+        reply_markup=create_del_tasks_kb(*new_tasks)
     )
     await callback.answer(
         text=f"{LEXICON_RU['category_deleted']} {callback.data[:-3]}")
+
+
+# Этот хендлер срабатывает на нажатие на задачу в инлайне редактирования задач
+@router.callback_query(IsUsersEditCategories())
+async def process_press_categories(callback: CallbackQuery, session: AsyncSession):
+    user = await orm_get_user_by_id(session, callback.from_user.id)
+    await orm_edit_task(session, callback.data[:-4])
+    new_tasks = await orm_get_tasks(session, user.id)
+    await callback.message.edit_text(
+        text=LEXICON_RU['/edit_categories'],
+        reply_markup=create_del_tasks_kb(*new_tasks)
+    )
+    await callback.answer(
+        text=f"{LEXICON_RU['task_edited']} {callback.data[:-4]}")
+# todo Надо доделать изменение задачи
+
 
 
 # Этот хендлер срабатывает на нажатие на задачу в списке и запускает работу по задаче

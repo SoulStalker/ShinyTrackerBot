@@ -87,9 +87,9 @@ def create_add_category_kb() -> InlineKeyboardMarkup:
     return kb_builder.as_markup()
 
 
-def create_edit_category_kb(*args: str) -> InlineKeyboardMarkup:
+def create_del_tasks_kb(*args: str) -> InlineKeyboardMarkup:
     """
-    Функция создает инлайн клавиатуру для редактирования категорий
+    Функция создает инлайн клавиатуру для удаления задач
     :param args:
     :return: InlineKeyboardMarkup
     """
@@ -98,6 +98,27 @@ def create_edit_category_kb(*args: str) -> InlineKeyboardMarkup:
         kb_builder.row(InlineKeyboardButton(
             text=f'❌ {button}',
             callback_data=f'{button}del'
+        ))
+    kb_builder.row(
+        InlineKeyboardButton(
+            text=LEXICON_RU['cancel'],
+            callback_data='cancel'
+        )
+    )
+    return kb_builder.as_markup()
+
+
+def create_edit_tasks_kb(*args: str) -> InlineKeyboardMarkup:
+    """
+    Функция создает инлайн клавиатуру для редактирования задач
+    :param args:
+    :return: InlineKeyboardMarkup
+    """
+    kb_builder = InlineKeyboardBuilder()
+    for button in sorted(args):
+        kb_builder.row(InlineKeyboardButton(
+            text=f'📝 {button}',
+            callback_data=f'{button}edit'
         ))
     kb_builder.row(
         InlineKeyboardButton(
