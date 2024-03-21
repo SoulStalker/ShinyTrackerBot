@@ -10,12 +10,9 @@ from handlers import other_handlers, user_handlers
 from middlewares.outer import ShadowBanMiddleware, DbMiddleware
 from database.enginge import drop_tables, create_tables, session_maker
 
-# SUPER_ADMIN = config.tg_bot.admin_ids[0]
 
 storage = MemoryStorage()
 
-
-# todo надо будет перенести либо в сервисы либо в отдельный модуль
 # класс для состояний
 class FSMGetTaskName(StatesGroup):
     # Состояние для ожидания называния новой задачи
@@ -36,7 +33,7 @@ async def main():
     dp.include_router(user_handlers.router)
     dp.include_router(other_handlers.router)
 
-    # Мидлваря для подклчения базы данных
+    # Мидлваря для подключения базы данных
     dp.update.middleware(DbMiddleware(session_pool=session_maker))
     # Подключается мидлваря для блокировки всех кроме админа
     dp.update.middleware(ShadowBanMiddleware(config.tg_bot.admin_ids))

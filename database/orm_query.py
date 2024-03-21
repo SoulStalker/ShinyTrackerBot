@@ -26,14 +26,13 @@ async def orm_add_user(session: AsyncSession, user_id: int) -> None:
 
 
 # Функция добавления задачи
-async def orm_add_task(session: AsyncSession, task_id: int, updated_data: dict) -> None:
-    task = await session.get(Task, task_id)
-    if task:
-        for key, value in updated_data.items():
-            setattr(task, key, value)
-        await session.commit()
-    else:
-        raise Exception("Task not found")
+async def orm_add_task(session: AsyncSession, data: dict) -> None:
+    obj = Task(
+        user_id=data['user_id'],
+        name=data['task_name'],
+    )
+    session.add(obj)
+    await session.commit()
 
 
 # Функция получения списка задач

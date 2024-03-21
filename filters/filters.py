@@ -6,7 +6,7 @@ from database.orm_query import orm_get_user_by_id, orm_get_tasks
 
 
 # Фильтр для отлова задач на удаление из сохраненного списка пользователя
-class IsUsersDelCategories(BaseFilter):
+class IsUsersDelTasks(BaseFilter):
     async def __call__(self, callback: CallbackQuery, session: AsyncSession) -> bool:
         user = await orm_get_user_by_id(session, callback.from_user.id)
         tasks = await orm_get_tasks(session, user.id)
@@ -15,7 +15,7 @@ class IsUsersDelCategories(BaseFilter):
 
 
 # Фильтр для отлова задач на изменение из сохраненного списка пользователя
-class IsUsersEditCategories(BaseFilter):
+class IsUsersEditTasks(BaseFilter):
     async def __call__(self, callback: CallbackQuery, session: AsyncSession) -> bool:
         user = await orm_get_user_by_id(session, callback.from_user.id)
         tasks = await orm_get_tasks(session, user.id)
@@ -24,7 +24,7 @@ class IsUsersEditCategories(BaseFilter):
 
 
 # Фильтр для отлова категорий в инлайне выбора категорий
-class ShowUsersCategories(BaseFilter):
+class ShowUsersTasks(BaseFilter):
     async def __call__(self, callback: CallbackQuery, session: AsyncSession) -> bool:
         user = await orm_get_user_by_id(session, callback.from_user.id)
         tasks = await orm_get_tasks(session, user.id)

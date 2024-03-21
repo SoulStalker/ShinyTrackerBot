@@ -5,7 +5,7 @@ from lexicon.lexicon import LEXICON_RU
 
 
 # Function for generating inline keyboards "on the fly"
-def create_categories_keyboard(width: int = 2, *args: str | set, **kwargs: str) -> InlineKeyboardMarkup:
+def create_tasks_keyboard(width: int = 2, *args: str | set, **kwargs: str) -> InlineKeyboardMarkup:
     # Initialize the builder
     kb_builder = InlineKeyboardBuilder()
     buttons: list[InlineKeyboardButton] = []
@@ -44,8 +44,8 @@ def create_common_keyboard(width: int = 2) -> InlineKeyboardMarkup:
     kb_builder = InlineKeyboardBuilder()
     kb_builder.row(
         InlineKeyboardButton(
-            text=LEXICON_RU['add_category'],
-            callback_data='add_category'
+            text=LEXICON_RU['add_task'],
+            callback_data='add_task'
         ),
         InlineKeyboardButton(
             text=LEXICON_RU['edit_categories'],
@@ -67,7 +67,7 @@ def create_common_keyboard(width: int = 2) -> InlineKeyboardMarkup:
 common_keyboard = create_common_keyboard(2)
 
 
-def create_add_category_kb() -> InlineKeyboardMarkup:
+def create_add_task_kb() -> InlineKeyboardMarkup:
     """
     Функция создает инлайн клавиатуру для добавления категорий
     :return: InlineKeyboardMarkup
