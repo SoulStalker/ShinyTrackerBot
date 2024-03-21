@@ -57,12 +57,13 @@ async def orm_remove_task(session: AsyncSession, task_name: str) -> str:
 
 
 # Функция изменяет задачу из базы по названию
-async def orm_edit_task(session: AsyncSession, task_name: str) -> str:
-    success = LEXICON_RU['success']
-    obj = Task(
-        user_id=data['user_id'],
-        name=data['task_name'],
-    )
+async def orm_edit_task(session: AsyncSession, task: dict) -> None:
+    query = (update(Task).where(
+        (Task.user_id == task['user_id']) & (Task.name == task['old_task_name'])
+    ).
+             values(name=task['new_task_name']))
+    await session.execute(query)
+    await session.commit()
 
 
 # Функция записывает начало работы задачи

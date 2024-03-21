@@ -18,7 +18,10 @@ storage = MemoryStorage()
 # todo надо будет перенести либо в сервисы либо в отдельный модуль
 # класс для состояний
 class FSMGetTaskName(StatesGroup):
+    # Состояние для ожидания называния новой задачи
     fill_task_name = State()
+    # Состояние для ожидания нового названия
+    set_task_name = State()
 
 
 async def main():

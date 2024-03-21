@@ -18,6 +18,7 @@ from bot import FSMGetTaskName
 
 router = Router()
 new_task_name = None
+old_task_name = None
 
 
 # Этот хендлер срабатывает на команду /start и создает пользователя в базе данных
@@ -62,7 +63,7 @@ async def add_category(callback: CallbackQuery, state: FSMContext):
 # Этот хендлер срабатывает на нажатие кнопки "Редактировать задачи"
 # в ответ выдается инлайн клавиатура с вопросами удалить или изменить задачу
 @router.callback_query(F.data == 'edit_categories')
-async def edit_categories(callback: CallbackQuery, session: AsyncSession):
+async def edit_categories(callback: CallbackQuery):
     await callback.message.edit_text(
         text=LEXICON_RU['del_or_edit_task'],
         reply_markup=create_del_or_edit_tasks_kb()
@@ -96,7 +97,7 @@ async def del_task(callback: CallbackQuery, session: AsyncSession):
     tasks = await orm_get_tasks(session, user.id)
     if tasks:
         await callback.message.edit_text(
-            text=LEXICON_RU['/edit_categories'],
+            text=LEXICON_RU['chose_task_for_edit'],
             reply_markup=create_edit_tasks_kb(
                 *tasks
             )
@@ -105,7 +106,6 @@ async def del_task(callback: CallbackQuery, session: AsyncSession):
         await callback.message.edit_text(
             text=LEXICON_RU['no_category'],
             reply_markup=common_keyboard)
-
 
 
 # Этот хендлер срабатывает на инлайн кнопку "Задача"
@@ -207,18 +207,49 @@ async def process_press_categories(callback: CallbackQuery, session: AsyncSessio
 
 # Этот хендлер срабатывает на нажатие на задачу в инлайне редактирования задач
 @router.callback_query(IsUsersEditCategories())
-async def process_press_categories(callback: CallbackQuery, session: AsyncSession):
-    user = await orm_get_user_by_id(session, callback.from_user.id)
-    await orm_edit_task(session, callback.data[:-4])
-    new_tasks = await orm_get_tasks(session, user.id)
+async def process_press_categories(callback: CallbackQuery, state: FSMContext):
+    global old_task_name
+    old_task_name = callback.data[:-4]
     await callback.message.edit_text(
-        text=LEXICON_RU['/edit_categories'],
-        reply_markup=create_del_tasks_kb(*new_tasks)
+        text=f"{LEXICON_RU['new_task_name']} {callback.data[:-4]}",
     )
-    await callback.answer(
-        text=f"{LEXICON_RU['task_edited']} {callback.data[:-4]}")
-# todo Надо доделать изменение задачи
+    await state.set_state(FSMGetTaskName.set_task_name)
 
+
+# Этот хендлер срабатывает на сообщения в FSM состоянии set_task_name
+@router.message(StateFilter(FSMGetTaskName.set_task_name), F.text.isalpha())
+async def edit_cat(message: Message, session: AsyncSession, state: FSMContext):
+    global new_task_name
+    await state.update_data(task_name=message.text)
+    state_data = await state.get_data()
+    new_task_name = state_data['task_name']
+    if await orm_get_user_by_id(session, message.from_user.id):
+        await message.answer(
+            text=f'{LEXICON_RU["new_name_of_task"]} {new_task_name}',
+            reply_markup=create_start_yes_no_kb(),
+        )
+    else:
+        await message.answer(text=LEXICON_RU['no_user'])
+
+
+# Этот хендлер срабатывает на кнопку изменить в инлайне изменения задачи в FSM состоянии set_task_name
+@router.callback_query(StateFilter(FSMGetTaskName.set_task_name), F.data == 'yes')
+async def process_really_edit_press(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
+    user = await orm_get_user_by_id(session, callback.from_user.id)
+    task = {'user_id': user.id, 'old_task_name': old_task_name, 'new_task_name': new_task_name}
+    if old_task_name in await orm_get_tasks(session, user.id):
+        await callback.message.edit_text(LEXICON_RU['task_exist'])
+        await orm_edit_task(session, task)
+        await callback.message.edit_text(
+            text=f"{LEXICON_RU['task_edited']} {new_task_name}\n",
+            reply_markup=common_keyboard
+        )
+    else:
+        await callback.message.edit_text(
+            text=LEXICON_RU['task_not_exist'],
+            reply_markup=common_keyboard
+        )
+    await state.clear()
 
 
 # Этот хендлер срабатывает на нажатие на задачу в списке и запускает работу по задаче
