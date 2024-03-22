@@ -10,8 +10,8 @@ from handlers import other_handlers, user_handlers
 from middlewares.outer import ShadowBanMiddleware, DbMiddleware
 from database.enginge import drop_tables, create_tables, session_maker
 
-
 storage = MemoryStorage()
+
 
 # класс для состояний
 class FSMGetTaskName(StatesGroup):
@@ -19,6 +19,9 @@ class FSMGetTaskName(StatesGroup):
     fill_task_name = State()
     # Состояние для ожидания нового названия
     set_task_name = State()
+    # ССостояние для ожидания нового длительности
+    set_work_duration_time = State()
+    set_break_duration_time = State()
 
 
 async def main():

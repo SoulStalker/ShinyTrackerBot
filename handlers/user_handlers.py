@@ -7,12 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from keyboards.keyboards import (common_keyboard, create_tasks_keyboard, create_add_task_kb,
                                  create_del_tasks_kb, create_stop_task_kb, create_start_yes_no_kb,
                                  create_stats_kb, create_cancel_kb, create_del_or_edit_tasks_kb,
-                                 create_edit_tasks_kb)
+                                 create_edit_tasks_kb, create_service_kb)
 from lexicon.lexicon import LEXICON_RU
 from filters.filters import (IsUsersDelTasks, ShowUsersTasks, IsStopTasks, IsInPeriods,
                              IsUsersEditTasks)
 from database.orm_query import (orm_get_user_by_id, orm_add_user, orm_add_task, orm_get_tasks,
-                                orm_remove_task, orm_update_work, orm_stop_work, orm_edit_task)
+                                orm_remove_task, orm_update_work, orm_stop_work, orm_edit_task,
+                                orm_get_settings, orm_update_settings, orm_add_default_settings)
 from services.services import orm_get_day_stats
 from bot import FSMGetTaskName
 
@@ -38,11 +39,17 @@ async def help_command(message: Message):
         reply_markup=create_start_yes_no_kb())
 
 
-@router.message(Command('support'))
-async def support_command(message: Message):
+@router.message(Command('service'))
+async def support_command(message: Message, session: AsyncSession):
+    user = await orm_get_user_by_id(session, message.from_user.id)
+    current_settings = await orm_get_settings(session, user.id)
+    if current_settings is None:
+        await orm_add_default_settings(session, user.id)
     await message.answer(
-        text=LEXICON_RU['/support'],
-        reply_markup=common_keyboard)
+        text=f"{LEXICON_RU['/service']}"
+             f"{LEXICON_RU['current_work_duration']} {current_settings.work_duration} {LEXICON_RU['minutes']}\n"
+             f"{LEXICON_RU['current_break_duration']} {current_settings.break_duration} {LEXICON_RU['minutes']}",
+        reply_markup=create_service_kb())
 
 
 @router.message(Command('contacts'))
@@ -294,3 +301,64 @@ async def process_cancel_press(callback: CallbackQuery, state: FSMContext):
         reply_markup=common_keyboard
     )
     await state.clear()
+
+
+# Этот хендлер срабатывает на кнопку "Задать длительность задачи" и переводит бота в FSM состояние set_work_duration_time
+@router.callback_query(F.data == 'edit_work_time')
+async def process_edit_work_time(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text(
+        text=LEXICON_RU['give_new_work_time'],
+        reply_markup=create_service_kb()
+    )
+    await state.set_state(FSMGetTaskName.set_work_duration_time)
+
+
+# Этот хендлер срабатывает на с сообщения с цифрами в FSM состояние set_work_duration_time
+@router.message(StateFilter(FSMGetTaskName.set_work_duration_time), F.text.isdigit())
+async def process_get_work_time_from_message(message: Message, session: AsyncSession, state: FSMContext):
+    user = await orm_get_user_by_id(session, message.from_user.id)
+    current_settings = await orm_get_settings(session, user.id)
+    await state.update_data(work_duration=message.text)
+    state_data = await state.get_data()
+    new_work_duration = state_data['work_duration']
+    await orm_update_settings(session, user.id, work_duration=new_work_duration, break_duration=current_settings.break_duration)
+    await message.answer(
+        text=f'{LEXICON_RU["new_work_time"]} {new_work_duration} {LEXICON_RU["minutes"]}',
+        reply_markup=create_service_kb(),
+    )
+    await state.clear()
+
+
+# Этот хендлер срабатывает на кнопку "Задать длительность перерыва" и переводит бота в FSM состояние set_break_duration_time
+@router.callback_query(F.data == 'edit_break_time')
+async def process_edit_break_time(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text(
+        text=LEXICON_RU['give_new_break_time'],
+        reply_markup=create_service_kb()
+    )
+    await state.set_state(FSMGetTaskName.set_break_duration_time)
+
+
+# Этот хендлер срабатывает на с сообщения с цифрами в FSM состояние set_break_duration_time
+@router.message(StateFilter(FSMGetTaskName.set_break_duration_time), F.text.isdigit())
+async def process_get_break_time_from_message(message: Message, session: AsyncSession, state: FSMContext):
+    user = await orm_get_user_by_id(session, message.from_user.id)
+    current_settings = await orm_get_settings(session, user.id)
+    await state.update_data(break_duration=message.text)
+    state_data = await state.get_data()
+    new_break_duration = state_data['break_duration']
+    await orm_update_settings(session, user.id, work_duration=current_settings.work_duration, break_duration=new_break_duration)
+    await message.answer(
+        text=f'{LEXICON_RU["new_break_duration"]} {new_break_duration} {LEXICON_RU["minutes"]}',
+        reply_markup=create_service_kb(),
+    )
+    await state.clear()
+
+
+# Этот хендлер срабатывает на ввод некорректных данных в состоянии в FSM состоянии set_work_duration_time b set_break_duration_time
+@router.message(StateFilter(FSMGetTaskName.set_work_duration_time, FSMGetTaskName.set_break_duration_time))
+async def warning_incorrect_duration(message: Message):
+    await message.answer(
+        text=LEXICON_RU['incorrect_duration'],
+        reply_markup=create_cancel_kb(),
+    )

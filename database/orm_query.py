@@ -1,10 +1,9 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
-from sqlalchemy import select, update, delete, null, extract, func, case, cast, String
+from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql.functions import coalesce
 
-from database.models import User, Task, Works
+from database.models import User, Task, Works, Settings
 from lexicon.lexicon import LEXICON_RU
 
 
@@ -86,4 +85,35 @@ async def orm_stop_work(session: AsyncSession, user_id: int) -> None:
     ).
              values(end_time=datetime.utcnow()))
     await session.execute(query)
+    await session.commit()
+
+
+# Функция возвращает данные о настройке бота
+async def orm_get_settings(session: AsyncSession, user_id: int) -> Settings:
+    query = select(Settings).where(Settings.user_id == user_id)
+    settings = await session.execute(query)
+    setting = settings.scalars().first()
+    return setting
+
+
+# Функция обновляет данные о настройке бота
+async def orm_update_settings(session: AsyncSession, user_id: int, work_duration: int = 25, break_duration: int = 10) -> None:
+    query = update(Settings).where(
+        Settings.user_id == user_id).values(
+        user_id=user_id,
+        work_duration=work_duration,
+        break_duration=break_duration,
+    )
+    await session.execute(query)
+    await session.commit()
+
+
+# Функция добавления новых настроек
+async def orm_add_default_settings(session: AsyncSession, user_id: int, work_duration: int = 25, break_duration: int = 10) -> None:
+    obj = Settings(
+        user_id=user_id,
+        work_duration=work_duration,
+        break_duration=break_duration,
+    )
+    session.add(obj)
     await session.commit()
