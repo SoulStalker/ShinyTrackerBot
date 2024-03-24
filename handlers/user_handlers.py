@@ -1,3 +1,6 @@
+import asyncio
+from asyncio import create_task
+
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart, StateFilter
 from aiogram.fsm.context import FSMContext
@@ -13,7 +16,7 @@ from filters.filters import (IsUsersDelTasks, ShowUsersTasks, IsStopTasks, IsInP
                              IsUsersEditTasks)
 from database.orm_query import (orm_get_user_by_id, orm_add_user, orm_add_task, orm_get_tasks,
                                 orm_remove_task, orm_update_work, orm_stop_work, orm_edit_task,
-                                orm_get_settings, orm_update_settings, orm_add_default_settings)
+                                orm_get_settings, orm_update_settings, orm_add_default_settings, orm_get_unclosed_work)
 from services.services import orm_get_day_stats
 from bot import FSMGetTaskName
 
@@ -250,6 +253,8 @@ async def process_start_task(callback: CallbackQuery, session: AsyncSession):
         text=f"{LEXICON_RU['start_work']} {chosen_task}{LEXICON_RU['stop_work']}",
         reply_markup=create_stop_task_kb(chosen_task)
     )
+    current_settings = await orm_get_settings(session, user.id)
+    await create_task(work_time_pomodoro(session, user.id, current_settings.work_duration * 60))
 
 
 # Этот хендлер срабатывает на нажатие остановки задачи
@@ -355,10 +360,20 @@ async def process_get_break_time_from_message(message: Message, session: AsyncSe
     await state.clear()
 
 
-# Этот хендлер срабатывает на ввод некорректных данных в состоянии в FSM состоянии set_work_duration_time b set_break_duration_time
+# Этот хендлер срабатывает на ввод некорректных данных в состоянии в FSM состоянии set_work_duration_time b
+# set_break_duration_time
 @router.message(StateFilter(FSMGetTaskName.set_work_duration_time, FSMGetTaskName.set_break_duration_time))
 async def warning_incorrect_duration(message: Message):
     await message.answer(
         text=LEXICON_RU['incorrect_duration'],
         reply_markup=create_cancel_kb(),
     )
+
+
+# Функция для таймера рабочего времени
+async def work_time_pomodoro(session: AsyncSession, user_id: int, delay: int) -> None:
+    while True:
+        await asyncio.sleep(delay)
+        unclosed = await orm_get_unclosed_work(session, user_id)
+        if unclosed is not None:
+            print(f'Time to close {unclosed.start_time}', end=' ')

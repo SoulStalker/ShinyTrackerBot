@@ -1,9 +1,12 @@
+import asyncio
+
 from datetime import datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models import Works, Task
+from database.orm_query import orm_get_unclosed_work
 from lexicon.lexicon import LEXICON_RU
 
 
