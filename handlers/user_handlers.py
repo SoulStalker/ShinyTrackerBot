@@ -280,16 +280,18 @@ async def process_stop(callback: CallbackQuery, session: AsyncSession):
 
 # Этот хендлер срабатывает на нажатие кнопки статистики и возвращает клавиатуру с периодами
 @router.callback_query(F.data == 'statistics')
-async def statistics(callback: CallbackQuery):
+async def statistics(callback: CallbackQuery, session: AsyncSession):
+    user = await orm_get_user_by_id(session, callback.from_user.id)
+    stats = await orm_get_day_stats(session, user.id, "today")
     await callback.message.edit_text(
-        # ,
-        text=LEXICON_RU['stats'],
-        reply_markup=create_stats_kb(width=2))
+        text=f"{LEXICON_RU['stats_for']} {LEXICON_RU['today'].lower()}\n\n{stats}",
+        reply_markup=create_stats_kb()
+    )
 
 
-# Этот хендлер срабатывает на нажатие кнопки month, то есть выводит статистику за месяц
+# Этот хендлер срабатывает на нажатие кнопки с периодом, то есть выводит статистику за выбранные период
 @router.callback_query(IsInPeriods())
-async def process_yesterday_statistics(callback: CallbackQuery, session: AsyncSession):
+async def process_period_statistics(callback: CallbackQuery, session: AsyncSession):
     user = await orm_get_user_by_id(session, callback.from_user.id)
     stats = await orm_get_day_stats(session, user.id, callback.data)
     await callback.message.edit_text(
