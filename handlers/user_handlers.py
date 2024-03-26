@@ -1,12 +1,13 @@
 import asyncio
 from asyncio import create_task
 
-from aiogram import F, Router
+from aiogram import F, Router, Bot
 from aiogram.filters import Command, CommandStart, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import bot
 from keyboards.keyboards import (common_keyboard, create_tasks_keyboard, create_add_task_kb,
                                  create_del_tasks_kb, create_stop_task_kb, create_start_yes_no_kb,
                                  create_stats_kb, create_cancel_kb, create_del_or_edit_tasks_kb,
@@ -245,7 +246,7 @@ async def process_choose_task(callback: CallbackQuery, session: AsyncSession):
 
 # Этот хендлер срабатывает на нажатие на задачу в списке и запускает работу по задаче
 @router.callback_query(ShowUsersTasks())
-async def process_start_task(callback: CallbackQuery, session: AsyncSession):
+async def process_start_task(callback: CallbackQuery, session: AsyncSession, bot: Bot):
     chosen_task = callback.data
     user = await orm_get_user_by_id(session, callback.from_user.id)
     await orm_update_work(session, chosen_task, user.id)
@@ -254,7 +255,8 @@ async def process_start_task(callback: CallbackQuery, session: AsyncSession):
         reply_markup=create_stop_task_kb(chosen_task)
     )
     current_settings = await orm_get_settings(session, user.id)
-    await create_task(work_time_pomodoro(session, user.id, current_settings.work_duration * 60))
+    period = current_settings.work_duration * 60
+    await create_task(work_time_pomodoro(bot, session, callback.from_user.id, user.id, period, chosen_task))
 
 
 # Этот хендлер срабатывает на нажатие остановки задачи
@@ -284,7 +286,7 @@ async def statistics(callback: CallbackQuery, session: AsyncSession):
     user = await orm_get_user_by_id(session, callback.from_user.id)
     stats = await orm_get_day_stats(session, user.id, "today")
     await callback.message.edit_text(
-        text=f"{LEXICON_RU['stats_for']} {LEXICON_RU['today'].lower()}\n\n{stats}",
+        text=f"{LEXICON_RU['stats_for']} <strong>{LEXICON_RU['today'].lower()}</strong>\n\n{stats}",
         reply_markup=create_stats_kb()
     )
 
@@ -295,7 +297,7 @@ async def process_period_statistics(callback: CallbackQuery, session: AsyncSessi
     user = await orm_get_user_by_id(session, callback.from_user.id)
     stats = await orm_get_day_stats(session, user.id, callback.data)
     await callback.message.edit_text(
-        text=f"{LEXICON_RU['stats_for']} {LEXICON_RU[callback.data].lower()}\n\n{stats}",
+        text=f"{LEXICON_RU['stats_for']} <strong>{LEXICON_RU[callback.data].lower()}</strong>\n\n{stats}",
         reply_markup=create_stats_kb()
     )
 
@@ -373,9 +375,14 @@ async def warning_incorrect_duration(message: Message):
 
 
 # Функция для таймера рабочего времени
-async def work_time_pomodoro(session: AsyncSession, user_id: int, delay: int) -> None:
+async def work_time_pomodoro(bot: Bot, session: AsyncSession, chat_id: int, user_id: int, delay: int, task_name: str) -> None:
     while True:
         await asyncio.sleep(delay)
         unclosed = await orm_get_unclosed_work(session, user_id)
         if unclosed is not None:
-            print(f'Time to close {unclosed.start_time}', end=' ')
+            text = f'{LEXICON_RU["time_to_close"]} {task_name}'
+            await send_its_time_message(bot, user_id=chat_id, text=text, task_name=task_name)
+
+
+async def send_its_time_message(bot: Bot, user_id: int, text: str, task_name: str) -> None:
+    await bot.send_message(user_id, text, reply_markup=create_stop_task_kb(task_name))

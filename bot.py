@@ -36,10 +36,10 @@ async def main():
     dp.include_router(user_handlers.router)
     dp.include_router(other_handlers.router)
 
-    # Мидлваря для подключения базы данных
-    dp.update.middleware(DbMiddleware(session_pool=session_maker))
     # Подключается мидлваря для блокировки всех кроме админа
     dp.update.middleware(ShadowBanMiddleware(config.tg_bot.admin_ids))
+    # Мидлваря для подключения базы данных
+    dp.update.middleware(DbMiddleware(session_pool=session_maker))
 
     # Passing accumulated updates and starting polling
     await bot.delete_webhook(drop_pending_updates=True)
