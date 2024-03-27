@@ -40,7 +40,6 @@ async def main():
     dp.update.middleware(ShadowBanMiddleware(config.tg_bot.admin_ids))
     # Мидлваря для подключения базы данных
     dp.update.middleware(DbMiddleware(session_pool=session_maker))
-
     # Passing accumulated updates and starting polling
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)

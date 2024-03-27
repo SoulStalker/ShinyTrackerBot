@@ -86,5 +86,8 @@ async def get_formatted_time(delta: timedelta) -> str:
 
     return formatted_time
 
+
+# Тут будут храниться id сообщений бота для удаления
+bot_messages_ids = {}
 # todo добавить оповещение
 # todo добавить очистку чата

@@ -7,7 +7,6 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import bot
 from keyboards.keyboards import (common_keyboard, create_tasks_keyboard, create_add_task_kb,
                                  create_del_tasks_kb, create_stop_task_kb, create_start_yes_no_kb,
                                  create_stats_kb, create_cancel_kb, create_del_or_edit_tasks_kb,
@@ -18,7 +17,7 @@ from filters.filters import (IsUsersDelTasks, ShowUsersTasks, IsStopTasks, IsInP
 from database.orm_query import (orm_get_user_by_id, orm_add_user, orm_add_task, orm_get_tasks,
                                 orm_remove_task, orm_update_work, orm_stop_work, orm_edit_task,
                                 orm_get_settings, orm_update_settings, orm_add_default_settings, orm_get_unclosed_work)
-from services.services import orm_get_day_stats
+from services.services import orm_get_day_stats, bot_messages_ids
 from bot import FSMGetTaskName
 
 router = Router()
@@ -28,23 +27,29 @@ old_task_name = None
 
 # Этот хендлер срабатывает на команду /start и создает пользователя в базе данных
 @router.message(CommandStart())
-async def start_command(message: Message, session: AsyncSession):
-    await message.answer(
+async def start_command(message: Message, session: AsyncSession, bot: Bot):
+    msg = await message.answer(
         text=LEXICON_RU['/start'],
         reply_markup=create_start_yes_no_kb())
     if not await orm_get_user_by_id(session, message.from_user.id):
         await orm_add_user(session, message.from_user.id)
+    bot_messages_ids.setdefault(message.chat.id, []).append(msg.message_id)
+    bot_messages_ids.setdefault(message.chat.id, []).append(message.message_id)
+    await process_do_the_chores(bot)
 
 
 @router.message(Command('help'))
-async def help_command(message: Message):
-    await message.answer(
+async def help_command(message: Message, bot: Bot):
+    msg = await message.answer(
         text=LEXICON_RU['/help'],
         reply_markup=create_start_yes_no_kb())
+    bot_messages_ids.setdefault(message.chat.id, []).append(msg.message_id)
+    bot_messages_ids.setdefault(message.chat.id, []).append(message.message_id)
+    await process_do_the_chores(bot)
 
 
 @router.message(Command('service'))
-async def support_command(message: Message, session: AsyncSession):
+async def support_command(message: Message, session: AsyncSession, bot: Bot):
     user = await orm_get_user_by_id(session, message.from_user.id)
     current_settings = await orm_get_settings(session, user.id)
     if current_settings is None:
@@ -384,5 +389,20 @@ async def work_time_pomodoro(bot: Bot, session: AsyncSession, chat_id: int, user
             await send_its_time_message(bot, user_id=chat_id, text=text, task_name=task_name)
 
 
+# Функция для отправки сообщения, что пора на перерыв
 async def send_its_time_message(bot: Bot, user_id: int, text: str, task_name: str) -> None:
-    await bot.send_message(user_id, text, reply_markup=create_stop_task_kb(task_name))
+    msg = await bot.send_message(user_id, text, reply_markup=create_stop_task_kb(task_name))
+    bot_messages_ids.setdefault(msg.chat.id, []).append(msg.message_id)
+    await process_do_the_chores(bot)
+
+
+# функция для удаления старых сообщений
+async def process_do_the_chores(bot: Bot):
+    await asyncio.sleep(10)
+    for chat in bot_messages_ids.keys():
+        for message_id in bot_messages_ids[chat]:
+            try:
+                await bot.delete_message(chat_id=chat, message_id=message_id)
+            except Exception as err:
+                print(err)
+    bot_messages_ids.clear()
