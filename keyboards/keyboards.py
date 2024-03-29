@@ -48,8 +48,8 @@ def create_common_keyboard(width: int = 2) -> InlineKeyboardMarkup:
             callback_data='add_task'
         ),
         InlineKeyboardButton(
-            text=LEXICON_RU['edit_categories'],
-            callback_data='edit_categories'
+            text=LEXICON_RU['edit_tasks'],
+            callback_data='edit_tasks'
         ),
         InlineKeyboardButton(
             text=LEXICON_RU['choose_category'],

@@ -20,7 +20,7 @@ LEXICON_RU: dict[str, str] = {
     '/contacts': 'По вопросом можно связаться через аккаунт @SoulStalk3r',
     'add_task': '▶️ Добавить задачу',
     '/ads_task': 'Добавляется задача',
-    'edit_categories': '📝 Редактировать задачи',
+    'edit_tasks': '📝 Редактировать задачи',
     '/edit_tasks': '🗑 Нажми на задачу чтобы удалить',
     'choose_category': '🗒 Задача',
     '/choose_category': '❗️Выбери задачу для запуска таймера:',

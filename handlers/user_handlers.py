@@ -120,7 +120,7 @@ async def process_really_add_press(callback: CallbackQuery, session: AsyncSessio
 
 # Этот хендлер срабатывает на нажатие кнопки "Редактировать задачи"
 # в ответ выдается инлайн клавиатура с вопросами удалить или изменить задачу
-@router.callback_query(F.data == 'edit_categories')
+@router.callback_query(F.data == 'edit_tasks')
 async def process_edit_task(callback: CallbackQuery):
     await callback.message.edit_text(
         text=LEXICON_RU['del_or_edit_task'],
