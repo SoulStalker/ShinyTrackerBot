@@ -270,7 +270,7 @@ async def process_start_task(callback: CallbackQuery, session: AsyncSession, bot
     )
     current_settings = await orm_get_settings(session, user.id)
     period = current_settings.work_duration * 60
-    await create_task(work_time_pomodoro(bot, session, callback.from_user.id, user.id, period, chosen_task))
+    await create_task(work_time_pomodoro(bot, session, callback.message, user.id, period, chosen_task))
 
 
 # Этот хендлер срабатывает на нажатие остановки задачи
@@ -294,7 +294,7 @@ async def process_stop(callback: CallbackQuery, session: AsyncSession, bot: Bot)
     )
     current_settings = await orm_get_settings(session, user.id)
     period = current_settings.break_duration * 60
-    await create_task(rest_time_pomodoro(bot, session, callback.from_user.id, user.id, period))
+    await create_task(rest_time_pomodoro(bot, session, callback.message, user.id, period))
 
 
 # Этот хендлер срабатывает на нажатие кнопки статистики и возвращает клавиатуру с периодами
@@ -392,40 +392,28 @@ async def warning_incorrect_duration(message: Message):
 
 
 # Функция для таймера рабочего времени
-async def work_time_pomodoro(bot: Bot, session: AsyncSession, chat_id: int, user_id: int, delay: int, task_name: str) -> None:
+async def work_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, user_id: int, delay: int, task_name: str) -> None:
     while True:
         await asyncio.sleep(delay)
         unclosed = await orm_get_unclosed_work(session, user_id)
         if unclosed is not None:
             text = f'{LEXICON_RU["time_to_close"]} {task_name}'
-            await send_its_time_message(bot, session, user_id=chat_id, db_user=user_id, text=text, task_name=task_name)
+            reply_markup = create_stop_task_kb(task_name)
+            await send_message_and_delete_last(bot, message.chat.id, text, reply_markup)
 
 
 # Функция для таймера перерыва
-async def rest_time_pomodoro(bot: Bot, session: AsyncSession, chat_id: int, user_id: int, delay: int) -> None:
-    while True:
+async def rest_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, user_id: int, delay: int) -> None:
+    message_count = 3
+    # todo добавить в сервис количество напоминаний ?
+    for _ in range(message_count):
         await asyncio.sleep(delay)
         unclosed = await orm_get_unclosed_work(session, user_id)
         if unclosed is None:
             text = f'{LEXICON_RU["time_to_work"]} {delay // 60} {LEXICON_RU["minutes"]}'
-            await send_its_time_message(bot, session, user_id=chat_id, db_user=user_id, text=text)
-
-
-# Функция для отправки сообщения, что пора на перерыв
-async def send_its_time_message(bot: Bot, session: AsyncSession, user_id: int, db_user: int, text: str, task_name=None) -> None:
-    if task_name:
-        msg = await bot.send_message(user_id, text, reply_markup=create_stop_task_kb(task_name))
-    else:
-        tasks = await orm_get_tasks(session, db_user)
-        msg = await bot.send_message(
-            user_id,
-            text=text,
-            reply_markup=create_tasks_keyboard(
-                2,
-                *tasks)
-        )
-    bot_messages_ids.setdefault(msg.chat.id, []).append(msg.message_id)
-    await process_do_the_chores(bot)
+            tasks = await orm_get_tasks(session, user_id)
+            reply_markup = create_tasks_keyboard(2, *tasks)
+            await send_message_and_delete_last(bot, message.chat.id, text, reply_markup)
 
 
 # функция для удаления старых сообщений
