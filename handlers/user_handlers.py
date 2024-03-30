@@ -25,47 +25,56 @@ new_task_name = None
 old_task_name = None
 
 
+# Функция для удаления старого и отправки нового сообщения
+async def send_message_and_delete_last(bot, chat_id, text, reply_markup=None):
+    # Удаляем предыдущее сообщение пользователя, если оно есть
+    if chat_id in bot_messages_ids:
+        await bot.delete_message(chat_id=chat_id, message_id=bot_messages_ids[chat_id])
+    msg = await bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
+    bot_messages_ids[chat_id] = msg.message_id
+
+
 # Этот хендлер срабатывает на команду /start и создает пользователя в базе данных
 @router.message(CommandStart())
 async def start_command(message: Message, session: AsyncSession, bot: Bot):
-    msg = await message.answer(
-        text=LEXICON_RU['/start'],
-        reply_markup=create_start_yes_no_kb())
+    reply_markup = create_start_yes_no_kb()
+    text = LEXICON_RU['/start']
+    await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+    await send_message_and_delete_last(bot, message.chat.id, text, reply_markup)
     if not await orm_get_user_by_id(session, message.from_user.id):
         await orm_add_user(session, message.from_user.id)
-    # bot_messages_ids.setdefault(message.chat.id, []).append(msg.message_id)
-    bot_messages_ids.setdefault(message.chat.id, []).append(message.message_id)
-    await process_do_the_chores(bot)
 
 
+# Этот хендлер срабатывает на команду /help
 @router.message(Command('help'))
 async def help_command(message: Message, bot: Bot):
-    msg = await message.answer(
-        text=LEXICON_RU['/help'],
-        reply_markup=create_start_yes_no_kb())
-    bot_messages_ids.setdefault(message.chat.id, []).append(msg.message_id)
-    bot_messages_ids.setdefault(message.chat.id, []).append(message.message_id)
-    await process_do_the_chores(bot)
+    text = LEXICON_RU['/help']
+    reply_markup = create_start_yes_no_kb()
+    await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+    await send_message_and_delete_last(bot, message.chat.id, text, reply_markup)
 
 
+# Этот хендлер срабатывает на команду /service
 @router.message(Command('service'))
 async def support_command(message: Message, session: AsyncSession, bot: Bot):
     user = await orm_get_user_by_id(session, message.from_user.id)
     current_settings = await orm_get_settings(session, user.id)
     if current_settings is None:
         await orm_add_default_settings(session, user.id)
-    await message.answer(
-        text=f"{LEXICON_RU['/service']}"
-             f"{LEXICON_RU['current_work_duration']} {current_settings.work_duration} {LEXICON_RU['minutes']}\n"
-             f"{LEXICON_RU['current_break_duration']} {current_settings.break_duration} {LEXICON_RU['minutes']}",
-        reply_markup=create_service_kb())
+    text = (f"{LEXICON_RU['/service']} {LEXICON_RU['current_work_duration']} "
+            f"{current_settings.work_duration} {LEXICON_RU['minutes']}\n{LEXICON_RU['current_break_duration']} "
+            f"{current_settings.break_duration} {LEXICON_RU['minutes']}")
+    reply_markup = create_service_kb()
+    await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+    await send_message_and_delete_last(bot, message.chat.id, text, reply_markup)
 
 
 @router.message(Command('contacts'))
-async def contacts_command(message: Message):
-    await message.answer(
-        text=LEXICON_RU['/contacts'],
-        reply_markup=common_keyboard)
+async def contacts_command(message: Message, bot: Bot):
+    text = LEXICON_RU['/contacts']
+    reply_markup = common_keyboard
+    await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+    await send_message_and_delete_last(bot, message.chat.id, text, reply_markup)
 
 
 # Этот хендлер срабатывает на ответ "Да" в начале работы бота
