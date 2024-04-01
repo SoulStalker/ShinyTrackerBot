@@ -71,10 +71,14 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
             result[key] = time_diff
     # Добавляем итоговое значение для всех задач
     result.setdefault(LEXICON_RU['total'], sum(result.values(), timedelta()))
-
-    for k, v in result.items():
-        print(k, v)
-        return_message += f'{k}: {await get_formatted_time(v)}\n'
+    max_name_length = max(len(k) for k in result.keys())
+    for i, (k, v) in enumerate(result.items()):
+        padding = " " * (max_name_length - len(k))
+        return_message += f'<code>{k}{padding}: {await get_formatted_time(v)}</code>\n'
+        if i == len(result) - 2:
+            print("-" * (max_name_length + 1))
+            return_message += f'{"-" * (max_name_length + 1)}\n'
+        print(return_message)
     return return_message
 
 
