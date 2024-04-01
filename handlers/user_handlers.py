@@ -321,63 +321,70 @@ async def process_period_statistics(callback: CallbackQuery, session: AsyncSessi
 
 # Этот хендлер срабатывает на кнопку "Отмена" и сбрасывает состояние FSM
 @router.callback_query(F.data == 'cancel')
-async def process_cancel_press(callback: CallbackQuery, state: FSMContext):
-    await callback.message.edit_text(
+async def process_cancel_press(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    await send_message_and_delete_last(
+        bot,
+        callback.message.chat.id,
         text=LEXICON_RU['choose_action'],
-        reply_markup=common_keyboard
-    )
+        reply_markup=common_keyboard)
     await state.clear()
 
 
 # Этот хендлер срабатывает на кнопку "Задать длительность задачи" и переводит бота в FSM состояние set_work_duration_time
 @router.callback_query(F.data == 'edit_work_time')
-async def process_edit_work_time(callback: CallbackQuery, state: FSMContext):
-    await callback.message.edit_text(
+async def process_edit_work_time(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    await send_message_and_delete_last(
+        bot,
+        callback.message.chat.id,
         text=LEXICON_RU['give_new_work_time'],
-        reply_markup=create_service_kb()
-    )
+        reply_markup=create_service_kb())
+    await state.set_state(FSMGetTaskName.set_break_duration_time)
     await state.set_state(FSMGetTaskName.set_work_duration_time)
 
 
 # Этот хендлер срабатывает на с сообщения с цифрами в FSM состояние set_work_duration_time
 @router.message(StateFilter(FSMGetTaskName.set_work_duration_time), F.text.isdigit())
-async def process_get_work_time_from_message(message: Message, session: AsyncSession, state: FSMContext):
+async def process_get_work_time_from_message(message: Message, session: AsyncSession, state: FSMContext, bot: Bot):
     user = await orm_get_user_by_id(session, message.from_user.id)
     current_settings = await orm_get_settings(session, user.id)
     await state.update_data(work_duration=message.text)
     state_data = await state.get_data()
     new_work_duration = state_data['work_duration']
     await orm_update_settings(session, user.id, work_duration=new_work_duration, break_duration=current_settings.break_duration)
-    await message.answer(
+    await send_message_and_delete_last(
+        bot,
+        message.chat.id,
         text=f'{LEXICON_RU["new_work_time"]} {new_work_duration} {LEXICON_RU["minutes"]}',
-        reply_markup=create_service_kb(),
-    )
+        reply_markup=create_service_kb())
+    await state.set_state(FSMGetTaskName.set_break_duration_time)
     await state.clear()
 
 
 # Этот хендлер срабатывает на кнопку "Задать длительность перерыва" и переводит бота в FSM состояние set_break_duration_time
 @router.callback_query(F.data == 'edit_break_time')
-async def process_edit_break_time(callback: CallbackQuery, state: FSMContext):
-    await callback.message.edit_text(
+async def process_edit_break_time(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    await send_message_and_delete_last(
+        bot,
+        callback.message.chat.id,
         text=LEXICON_RU['give_new_break_time'],
-        reply_markup=create_service_kb()
-    )
+        reply_markup=create_service_kb())
     await state.set_state(FSMGetTaskName.set_break_duration_time)
 
 
 # Этот хендлер срабатывает на с сообщения с цифрами в FSM состояние set_break_duration_time
 @router.message(StateFilter(FSMGetTaskName.set_break_duration_time), F.text.isdigit())
-async def process_get_break_time_from_message(message: Message, session: AsyncSession, state: FSMContext):
+async def process_get_break_time_from_message(message: Message, session: AsyncSession, state: FSMContext, bot: Bot):
     user = await orm_get_user_by_id(session, message.from_user.id)
     current_settings = await orm_get_settings(session, user.id)
     await state.update_data(break_duration=message.text)
     state_data = await state.get_data()
     new_break_duration = state_data['break_duration']
     await orm_update_settings(session, user.id, work_duration=current_settings.work_duration, break_duration=new_break_duration)
-    await message.answer(
+    await send_message_and_delete_last(
+        bot,
+        message.chat.id,
         text=f'{LEXICON_RU["new_break_duration"]} {new_break_duration} {LEXICON_RU["minutes"]}',
-        reply_markup=create_service_kb(),
-    )
+        reply_markup=create_service_kb())
     await state.clear()
 
 
@@ -397,9 +404,11 @@ async def work_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, 
         await asyncio.sleep(delay)
         unclosed = await orm_get_unclosed_work(session, user_id)
         if unclosed is not None:
-            text = f'{LEXICON_RU["time_to_close"]} {task_name}'
-            reply_markup = create_stop_task_kb(task_name)
-            await send_message_and_delete_last(bot, message.chat.id, text, reply_markup)
+            await send_message_and_delete_last(
+                bot,
+                message.chat.id,
+                text=f'{LEXICON_RU["time_to_close"]} {task_name}',
+                reply_markup=create_stop_task_kb(task_name))
 
 
 # Функция для таймера перерыва
@@ -410,10 +419,12 @@ async def rest_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, 
         await asyncio.sleep(delay)
         unclosed = await orm_get_unclosed_work(session, user_id)
         if unclosed is None:
-            text = f'{LEXICON_RU["time_to_work"]} {delay // 60} {LEXICON_RU["minutes"]}'
             tasks = await orm_get_tasks(session, user_id)
-            reply_markup = create_tasks_keyboard(2, *tasks)
-            await send_message_and_delete_last(bot, message.chat.id, text, reply_markup)
+            await send_message_and_delete_last(
+                bot,
+                message.chat.id,
+                text=f'{LEXICON_RU["time_to_work"]} {delay // 60} {LEXICON_RU["minutes"]}',
+                reply_markup=create_tasks_keyboard(2, *tasks))
 
 
 # функция для удаления старых сообщений
