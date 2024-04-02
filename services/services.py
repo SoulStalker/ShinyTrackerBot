@@ -1,7 +1,8 @@
 import asyncio
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 
+from aiogram import Bot
 from aiogram.types import Message
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -95,4 +96,3 @@ async def get_formatted_time(delta: timedelta) -> str:
 
 # Тут будут храниться id сообщений бота для удаления
 bot_messages_ids = {}
-# todo добавить очистку чата

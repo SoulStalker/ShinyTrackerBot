@@ -1,6 +1,7 @@
 from datetime import datetime
+from typing import Optional
 
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models import User, Task, Works, Settings
@@ -36,10 +37,18 @@ async def orm_add_task(session: AsyncSession, data: dict) -> None:
 
 # Функция получения списка задач
 async def orm_get_tasks(session: AsyncSession, user_id: int) -> list[Task]:
-    query = select(Task.name).where(user_id == user_id)
+    query = select(Task.name).where(Task.user_id == user_id)
     tasks = await session.execute(query)
     tasks = tasks.scalars().all()
     return list(tasks)
+
+
+# Функция получения задачи по id
+async def orm_get_task_by_id(session: AsyncSession, user_id: int, task_id: int) -> Optional[Task]:
+    query = select(Task).where(and_(Task.user_id == user_id, Task.id == task_id))
+    tasks = await session.execute(query)
+    task = tasks.scalars().first()
+    return task
 
 
 # Функция удаляет задачу из базы по названию
@@ -128,3 +137,13 @@ async def orm_get_unclosed_work(session: AsyncSession, user_id: int) -> Works:
     works = await session.execute(query)
     work = works.scalars().first()
     return work
+
+
+# Функция получает последнюю задачу
+async def orm_get_unclosed_work(session: AsyncSession, user_id: int) -> Works:
+    query = (select(Works).where(
+        (Works.user_id == user_id) & (Works.end_time == None)
+    ))
+    works = await session.execute(query)
+    work = works.scalars().all()
+    return max(work, key=lambda x: x.end_time)
