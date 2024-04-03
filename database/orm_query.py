@@ -80,7 +80,7 @@ async def orm_update_work(session: AsyncSession, task_name: str, user_id: int) -
     obj = Works(
         user_id=user_id,
         task_id=task_id,
-        start_time=datetime.utcnow()
+        start_time=datetime.now()
     )
     session.add(obj)
     await session.commit()
@@ -92,7 +92,7 @@ async def orm_stop_work(session: AsyncSession, user_id: int) -> None:
     query = (update(Works).where(
         (Works.user_id == user_id) & (Works.end_time == None)
     ).
-             values(end_time=datetime.utcnow()))
+             values(end_time=datetime.now()))
     await session.execute(query)
     await session.commit()
 
