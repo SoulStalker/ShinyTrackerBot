@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import select, update, delete, and_
+from sqlalchemy import select, update, delete, and_, desc, null
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models import User, Task, Works, Settings
@@ -132,18 +132,22 @@ async def orm_add_default_settings(session: AsyncSession, user_id: int, work_dur
 # Так как не должно быть незаконченных задач сразу закрываем все незаконченные
 async def orm_get_unclosed_work(session: AsyncSession, user_id: int) -> Works:
     query = (select(Works).where(
-        (Works.user_id == user_id) & (Works.end_time == None)
+        (Works.user_id == user_id) & (Works.end_time == null())
     ))
     works = await session.execute(query)
     work = works.scalars().first()
+    print(work.id, work.end_time)
     return work
 
 
 # Функция получает последнюю задачу
-async def orm_get_unclosed_work(session: AsyncSession, user_id: int) -> Works:
-    query = (select(Works).where(
-        (Works.user_id == user_id) & (Works.end_time == None)
-    ))
+async def orm_get_last_work(session: AsyncSession, user_id: int) -> Works:
+    query = select(Works).filter(Works.user_id == user_id).order_by(desc(Works.end_time))
     works = await session.execute(query)
     work = works.scalars().all()
-    return max(work, key=lambda x: x.end_time)
+
+    if not work:
+        print("EMPTY")
+        return None
+
+    return work[0]  # Вернуть первую запись с максимальным end_time

@@ -18,7 +18,7 @@ from filters.filters import (IsUsersDelTasks, ShowUsersTasks, IsStopTasks, IsInP
 from database.orm_query import (orm_get_user_by_id, orm_add_user, orm_add_task, orm_get_tasks,
                                 orm_remove_task, orm_update_work, orm_stop_work, orm_edit_task,
                                 orm_get_settings, orm_update_settings, orm_add_default_settings,
-                                orm_get_unclosed_work, orm_get_task_by_id)
+                                orm_get_unclosed_work, orm_get_last_work, orm_get_task_by_id)
 from services.services import orm_get_day_stats, bot_messages_ids
 from bot import FSMGetTaskName
 
@@ -404,12 +404,12 @@ async def warning_incorrect_duration(message: Message):
 
 # Функция для таймера рабочего времени
 async def work_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, user_id: int, delay: int, task_name: str) -> None:
-    print(f'Working for {delay // 60} minutes')
+    print(f'Working for {delay // 60} minute, suser {user_id}')
     while True:
         await asyncio.sleep(delay)
         unclosed = await orm_get_unclosed_work(session, user_id)
-        task = await orm_get_task_by_id(session, user_id, unclosed.task_id)
         if unclosed is not None:
+            task = await orm_get_task_by_id(session, user_id, unclosed.task_id)
             await send_message_and_delete_last(
                 bot,
                 message.chat.id,
@@ -421,10 +421,11 @@ async def work_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, 
 # Функция для таймера перерыва
 async def rest_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, user_id: int, delay: int) -> None:
     message_count = 3
-    # todo добавить в сервис количество напоминаний ?
+    print(f'resting delay is {delay} user {user_id}')
     for _ in range(message_count):
+        print(f'sleeping {delay} seconds')
         await asyncio.sleep(delay)
-        unclosed = await orm_get_unclosed_work(session, user_id)
+        unclosed = await orm_get_last_work(session, user_id)
         if unclosed is None:
             tasks = await orm_get_tasks(session, user_id)
             await send_message_and_delete_last(
@@ -432,6 +433,8 @@ async def rest_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, 
                 message.chat.id,
                 text=f'{LEXICON_RU["time_to_work"]} {delay // 60} {LEXICON_RU["minutes"]}',
                 reply_markup=create_tasks_keyboard(2, *tasks))
+        else:
+            print(unclosed.id)
 
 
 # функция для удаления старых сообщений
