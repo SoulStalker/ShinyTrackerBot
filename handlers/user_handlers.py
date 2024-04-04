@@ -270,12 +270,11 @@ async def process_start_task(callback: CallbackQuery, session: AsyncSession, bot
         text=f"{LEXICON_RU['start_work']}{chosen_task} в {datetime.now().time().strftime('%H:%M')}{LEXICON_RU['stop_work']}",
         reply_markup=create_stop_task_kb(chosen_task)
     )
-    # await send_scheduled_stats(bot, session, callback.from_user.id, user.id, time(16, 31))
-    # todo этот косяк надо исправить
     current_settings = await orm_get_settings(session, user.id)
     period = current_settings.work_duration * 60
-    await callback.message.edit_text(f'Рабочий период: {period} секунд', reply_markup=create_stop_task_kb(chosen_task))
-    await create_task(work_time_pomodoro(bot, session, callback.message, user.id, period, chosen_task))
+    # await send_scheduled_stats(bot, session, callback.from_user.id, user.id, time(16, 31))
+    # todo этот косяк надо исправить
+    await create_task(work_time_pomodoro(bot, session, callback.message, user.id, period))
 
 
 # Этот хендлер срабатывает на нажатие остановки задачи
@@ -404,23 +403,24 @@ async def warning_incorrect_duration(message: Message):
 
 
 # Функция для таймера рабочего времени
-async def work_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, db_user_id: int, delay: int, task_name: str) -> None:
+async def work_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, db_user_id: int, delay: int) -> None:
     while True:
         await asyncio.sleep(delay)
         unclosed = await orm_get_unclosed_work(session, db_user_id)
-        if unclosed is not None:
+        if unclosed is not None and unclosed.end_time is None:
             task = await orm_get_task_by_id(session, db_user_id, unclosed.task_id)
             await send_message_and_delete_last(
                 bot,
                 message.chat.id,
                 text=f'{LEXICON_RU["time_to_close"]} {task.name}'
-                     f'{LEXICON_RU["started_at"]} {unclosed.start_time.strftime("%H:%M")}',
-                reply_markup=create_stop_task_kb(task_name))
+                     f'{LEXICON_RU["started_at"]} {unclosed.start_time.strftime("%H:%M")}'
+                     f'\n\n{unclosed.end_time}',
+                reply_markup=create_stop_task_kb(task.name))
 
 
 # Функция для таймера перерыва
 async def rest_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, user_id: int, delay: int) -> None:
-    message_count = 3
+    message_count = 1
     for _ in range(message_count):
         await asyncio.sleep(delay)
         unclosed = await orm_get_last_work(session, user_id)
