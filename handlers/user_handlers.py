@@ -262,7 +262,7 @@ async def process_choose_task(callback: CallbackQuery, session: AsyncSession):
 
 # Этот хендлер срабатывает на нажатие на задачу в списке и запускает работу по задаче
 @router.callback_query(ShowUsersTasks())
-async def process_start_task(callback: CallbackQuery, session: AsyncSession, bot: Bot):
+async def process_start_task(callback: CallbackQuery, session: AsyncSession, bot: Bot, state: FSMContext):
     chosen_task = callback.data
     user = await orm_get_user_by_id(session, callback.from_user.id)
     await orm_update_work(session, chosen_task, user.id)
@@ -274,6 +274,7 @@ async def process_start_task(callback: CallbackQuery, session: AsyncSession, bot
     # todo этот косяк надо исправить
     current_settings = await orm_get_settings(session, user.id)
     period = current_settings.work_duration * 60
+    await callback.message.edit_text(f'Рабочий период: {period} секунд', reply_markup=create_stop_task_kb(chosen_task))
     await create_task(work_time_pomodoro(bot, session, callback.message, user.id, period, chosen_task))
 
 

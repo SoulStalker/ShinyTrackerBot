@@ -136,7 +136,6 @@ async def orm_get_unclosed_work(session: AsyncSession, user_id: int) -> Works:
     ))
     works = await session.execute(query)
     work = works.scalars().first()
-    print(work.id, work.end_time)
     return work
 
 
@@ -147,7 +146,6 @@ async def orm_get_last_work(session: AsyncSession, user_id: int) -> Works:
     work = works.scalars().all()
 
     if not work:
-        print("EMPTY")
         return None
 
     return work[0]  # Вернуть первую запись с максимальным end_time

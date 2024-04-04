@@ -19,9 +19,13 @@ class FSMGetTaskName(StatesGroup):
     fill_task_name = State()
     # Состояние для ожидания нового названия
     set_task_name = State()
-    # ССостояние для ожидания нового длительности
+    # Состояние для ожидания нового длительности
     set_work_duration_time = State()
     set_break_duration_time = State()
+    # Состояние работы
+    working_process = State()
+    # Состояние перерыва
+    break_process = State()
 
 
 async def main():
