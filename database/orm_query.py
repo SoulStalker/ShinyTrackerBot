@@ -132,7 +132,7 @@ async def orm_add_default_settings(session: AsyncSession, user_id: int, work_dur
 # Так как не должно быть незаконченных задач сразу закрываем все незаконченные
 async def orm_get_unclosed_work(session: AsyncSession, user_id: int) -> Works:
     query = (select(Works).where(
-        (Works.user_id == user_id) & (Works.end_time == null())
+        (Works.user_id == user_id) & (Works.end_time == None)
     ))
     works = await session.execute(query)
     work = works.scalars().first()

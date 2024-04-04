@@ -270,8 +270,8 @@ async def process_start_task(callback: CallbackQuery, session: AsyncSession, bot
         text=f"{LEXICON_RU['start_work']}{chosen_task} в {datetime.now().time().strftime('%H:%M')}{LEXICON_RU['stop_work']}",
         reply_markup=create_stop_task_kb(chosen_task)
     )
-    await send_scheduled_stats(bot, session, callback.from_user.id, user.id, time(16, 31))
-
+    # await send_scheduled_stats(bot, session, callback.from_user.id, user.id, time(16, 31))
+    # todo этот косяк надо исправить
     current_settings = await orm_get_settings(session, user.id)
     period = current_settings.work_duration * 60
     await create_task(work_time_pomodoro(bot, session, callback.message, user.id, period, chosen_task))
@@ -403,13 +403,12 @@ async def warning_incorrect_duration(message: Message):
 
 
 # Функция для таймера рабочего времени
-async def work_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, user_id: int, delay: int, task_name: str) -> None:
-    print(f'Working for {delay // 60} minute, suser {user_id}')
+async def work_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, db_user_id: int, delay: int, task_name: str) -> None:
     while True:
         await asyncio.sleep(delay)
-        unclosed = await orm_get_unclosed_work(session, user_id)
+        unclosed = await orm_get_unclosed_work(session, db_user_id)
         if unclosed is not None:
-            task = await orm_get_task_by_id(session, user_id, unclosed.task_id)
+            task = await orm_get_task_by_id(session, db_user_id, unclosed.task_id)
             await send_message_and_delete_last(
                 bot,
                 message.chat.id,
@@ -421,20 +420,17 @@ async def work_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, 
 # Функция для таймера перерыва
 async def rest_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, user_id: int, delay: int) -> None:
     message_count = 3
-    print(f'resting delay is {delay} user {user_id}')
     for _ in range(message_count):
-        print(f'sleeping {delay} seconds')
         await asyncio.sleep(delay)
         unclosed = await orm_get_last_work(session, user_id)
-        if unclosed is None:
+        print('UNCLOSED:', unclosed.id, unclosed.start_time, unclosed.end_time, unclosed.end_time is None)
+        if unclosed is None or unclosed.end_time is not None:
             tasks = await orm_get_tasks(session, user_id)
             await send_message_and_delete_last(
                 bot,
                 message.chat.id,
                 text=f'{LEXICON_RU["time_to_work"]} {delay // 60} {LEXICON_RU["minutes"]}',
                 reply_markup=create_tasks_keyboard(2, *tasks))
-        else:
-            print(unclosed.id)
 
 
 # функция для удаления старых сообщений
@@ -453,7 +449,6 @@ async def process_do_the_chores(bot: Bot):
 async def send_scheduled_stats(bot: Bot, session: AsyncSession, chat_id: int, db_user: int, send_time):
     now = datetime.now().time()
     if now > send_time:
-        print(f'send time {send_time} less than now {now}')
         return
     else:
         while now < send_time:
