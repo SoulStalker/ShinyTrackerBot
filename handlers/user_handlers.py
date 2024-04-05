@@ -1,6 +1,6 @@
 import asyncio
 from asyncio import create_task
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 
 from aiogram import F, Router, Bot
 from aiogram.filters import Command, CommandStart, StateFilter
@@ -25,6 +25,9 @@ from bot import FSMGetTaskName
 router = Router()
 new_task_name = None
 old_task_name = None
+work_task = None
+rest_task = None
+# Обрастаю глобальными переменными
 
 
 # Функция для удаления старого и отправки нового сообщения
@@ -263,6 +266,7 @@ async def process_choose_task(callback: CallbackQuery, session: AsyncSession):
 # Этот хендлер срабатывает на нажатие на задачу в списке и запускает работу по задаче
 @router.callback_query(ShowUsersTasks())
 async def process_start_task(callback: CallbackQuery, session: AsyncSession, bot: Bot, state: FSMContext):
+    global work_task
     chosen_task = callback.data
     user = await orm_get_user_by_id(session, callback.from_user.id)
     await orm_update_work(session, chosen_task, user.id)
@@ -274,12 +278,17 @@ async def process_start_task(callback: CallbackQuery, session: AsyncSession, bot
     period = current_settings.work_duration * 60
     # await send_scheduled_stats(bot, session, callback.from_user.id, user.id, time(16, 31))
     # todo этот косяк надо исправить
-    await create_task(work_time_pomodoro(bot, session, callback.message, user.id, period))
+    print('Work task = ', work_task)
+    if work_task and not work_task.done():
+        work_task.cancel()
+    work_task = await create_task(work_time_pomodoro(bot, session, callback.message, user.id, period))
+    print('Work task = ', work_task)
 
 
 # Этот хендлер срабатывает на нажатие остановки задачи
 @router.callback_query(IsStopTasks())
 async def process_stop(callback: CallbackQuery, session: AsyncSession, bot: Bot):
+    global rest_task
     user = await orm_get_user_by_id(session, callback.from_user.id)
     tasks = await orm_get_tasks(session, user.id)
     await orm_stop_work(session, user.id)
@@ -298,7 +307,11 @@ async def process_stop(callback: CallbackQuery, session: AsyncSession, bot: Bot)
     )
     current_settings = await orm_get_settings(session, user.id)
     period = current_settings.break_duration * 60
-    await create_task(rest_time_pomodoro(bot, session, callback.message, user.id, period))
+    print('Rest_task = ', rest_task)
+    if rest_task and not rest_task.done():
+        rest_task.cancel()
+    rest_task = await create_task(rest_time_pomodoro(bot, session, callback.message, user.id, period))
+    print('Rest_task = ', rest_task)
 
 
 # Этот хендлер срабатывает на нажатие кнопки статистики и возвращает клавиатуру с периодами
@@ -405,9 +418,11 @@ async def warning_incorrect_duration(message: Message):
 # Функция для таймера рабочего времени
 async def work_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, db_user_id: int, delay: int) -> None:
     while True:
-        await asyncio.sleep(delay)
+        print('WORK TIME POMODORO', work_task)
+        await asyncio.sleep(60)
         unclosed = await orm_get_unclosed_work(session, db_user_id)
-        if unclosed is not None and unclosed.end_time is None:
+        if unclosed is not None and datetime.now() > unclosed.start_time + timedelta(seconds=delay):
+            print('work_time_pomodoro SAYS:',unclosed.start_time, unclosed.start_time + timedelta(seconds=delay))
             task = await orm_get_task_by_id(session, db_user_id, unclosed.task_id)
             await send_message_and_delete_last(
                 bot,
@@ -422,9 +437,9 @@ async def work_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, 
 async def rest_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, user_id: int, delay: int) -> None:
     message_count = 1
     for _ in range(message_count):
+        print('REST TIME POMODORO', rest_task)
         await asyncio.sleep(delay)
         unclosed = await orm_get_last_work(session, user_id)
-        print('UNCLOSED:', unclosed.id, unclosed.start_time, unclosed.end_time, unclosed.end_time is None)
         if unclosed is None or unclosed.end_time is not None:
             tasks = await orm_get_tasks(session, user_id)
             await send_message_and_delete_last(
