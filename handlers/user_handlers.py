@@ -276,8 +276,7 @@ async def process_start_task(callback: CallbackQuery, session: AsyncSession, bot
     )
     current_settings = await orm_get_settings(session, user.id)
     period = current_settings.work_duration * 60
-    # await send_scheduled_stats(bot, session, callback.from_user.id, user.id, time(16, 31))
-    # todo этот косяк надо исправить
+    await create_task(send_scheduled_stats(bot, session, callback.from_user.id, user.id, time(18, 5)))
     print('Work task = ', work_task)
     if work_task and not work_task.done():
         work_task.cancel()
