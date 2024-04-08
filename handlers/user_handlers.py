@@ -33,8 +33,11 @@ rest_task = None
 # Функция для удаления старого и отправки нового сообщения
 async def send_message_and_delete_last(bot, chat_id, text, reply_markup=None):
     # Удаляем предыдущее сообщение пользователя, если оно есть
-    if chat_id in bot_messages_ids:
-        await bot.delete_message(chat_id=chat_id, message_id=bot_messages_ids[chat_id])
+    for chat_id in bot_messages_ids:
+        try:
+            await bot.delete_message(chat_id=chat_id, message_id=bot_messages_ids[chat_id])
+        except Exception as err:
+            print(err)
     msg = await bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
     bot_messages_ids[chat_id] = msg.message_id
 
@@ -276,13 +279,10 @@ async def process_start_task(callback: CallbackQuery, session: AsyncSession, bot
     )
     current_settings = await orm_get_settings(session, user.id)
     period = current_settings.work_duration * 60
-    # await send_scheduled_stats(bot, session, callback.from_user.id, user.id, time(16, 31))
-    # todo этот косяк надо исправить
-    print('Work task = ', work_task)
+    await create_task(send_scheduled_stats(bot, session, callback.from_user.id, user.id, time(18, 5)))
     if work_task and not work_task.done():
         work_task.cancel()
     work_task = await create_task(work_time_pomodoro(bot, session, callback.message, user.id, period))
-    print('Work task = ', work_task)
 
 
 # Этот хендлер срабатывает на нажатие остановки задачи
@@ -307,11 +307,9 @@ async def process_stop(callback: CallbackQuery, session: AsyncSession, bot: Bot)
     )
     current_settings = await orm_get_settings(session, user.id)
     period = current_settings.break_duration * 60
-    print('Rest_task = ', rest_task)
     if rest_task and not rest_task.done():
         rest_task.cancel()
     rest_task = await create_task(rest_time_pomodoro(bot, session, callback.message, user.id, period))
-    print('Rest_task = ', rest_task)
 
 
 # Этот хендлер срабатывает на нажатие кнопки статистики и возвращает клавиатуру с периодами
@@ -418,18 +416,15 @@ async def warning_incorrect_duration(message: Message):
 # Функция для таймера рабочего времени
 async def work_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, db_user_id: int, delay: int) -> None:
     while True:
-        print('WORK TIME POMODORO', work_task)
         await asyncio.sleep(60)
         unclosed = await orm_get_unclosed_work(session, db_user_id)
         if unclosed is not None and datetime.now() > unclosed.start_time + timedelta(seconds=delay):
-            print('work_time_pomodoro SAYS:',unclosed.start_time, unclosed.start_time + timedelta(seconds=delay))
             task = await orm_get_task_by_id(session, db_user_id, unclosed.task_id)
             await send_message_and_delete_last(
                 bot,
                 message.chat.id,
                 text=f'{LEXICON_RU["time_to_close"]} {task.name}'
-                     f'{LEXICON_RU["started_at"]} {unclosed.start_time.strftime("%H:%M")}'
-                     f'\n\n{unclosed.end_time}',
+                     f'{LEXICON_RU["started_at"]} {unclosed.start_time.strftime("%H:%M")}',
                 reply_markup=create_stop_task_kb(task.name))
 
 
@@ -437,7 +432,6 @@ async def work_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, 
 async def rest_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, user_id: int, delay: int) -> None:
     message_count = 1
     for _ in range(message_count):
-        print('REST TIME POMODORO', rest_task)
         await asyncio.sleep(delay)
         unclosed = await orm_get_last_work(session, user_id)
         if unclosed is None or unclosed.end_time is not None:
