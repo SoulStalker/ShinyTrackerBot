@@ -71,6 +71,8 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
         else:
             result[key] = time_diff
     # Добавляем итоговое значение для всех задач
+    result = {k: v for k, v in sorted(result.items(), key=lambda item: item[1])}
+    print('result: ', result)
     result.setdefault(LEXICON_RU['total'], sum(result.values(), timedelta()))
     max_name_length = max(len(k) for k in result.keys())
     for i, (k, v) in enumerate(result.items()):
