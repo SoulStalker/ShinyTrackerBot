@@ -30,25 +30,26 @@ rest_task = None
 # Обрастаю глобальными переменными
 
 
-# Функция для удаления старого и отправки нового сообщения
-async def send_message_and_delete_last(bot, chat_id, text, reply_markup=None):
-    # Удаляем предыдущее сообщение пользователя, если оно есть
-    for chat_id in bot_messages_ids:
-        try:
-            await bot.delete_message(chat_id=chat_id, message_id=bot_messages_ids[chat_id])
-        except Exception as err:
-            print(err)
-    msg = await bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
-    bot_messages_ids[chat_id] = msg.message_id
+# # Функция для удаления старого и отправки нового сообщения
+# async def send_message_and_delete_last(bot, chat_id, text, reply_markup=None):
+#     # Удаляем предыдущее сообщение пользователя, если оно есть
+#     for chat_id in bot_messages_ids:
+#         try:
+#             await bot.delete_message(chat_id=chat_id, message_id=bot_messages_ids[chat_id])
+#         except Exception as err:
+#             print(err)
+#     msg = await bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
+#     bot_messages_ids[chat_id] = msg.message_id
 
 
 # Этот хендлер срабатывает на команду /start и создает пользователя в базе данных
 @router.message(CommandStart())
 async def start_command(message: Message, session: AsyncSession, bot: Bot):
-    reply_markup = create_start_yes_no_kb()
-    text = LEXICON_RU['/start']
-    await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
-    await send_message_and_delete_last(bot, message.chat.id, text, reply_markup)
+    await bot.send_message(
+        chat_id=message.chat.id,
+        text=LEXICON_RU['/start'],
+        reply_markup=create_start_yes_no_kb()
+    )
     if not await orm_get_user_by_id(session, message.from_user.id):
         await orm_add_user(session, message.from_user.id)
 
@@ -56,10 +57,11 @@ async def start_command(message: Message, session: AsyncSession, bot: Bot):
 # Этот хендлер срабатывает на команду /help
 @router.message(Command('help'))
 async def help_command(message: Message, bot: Bot):
-    text = LEXICON_RU['/help']
-    reply_markup = create_start_yes_no_kb()
-    await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
-    await send_message_and_delete_last(bot, message.chat.id, text, reply_markup)
+    await bot.send_message(
+        chat_id=message.chat.id,
+        text=LEXICON_RU['/help'],
+        reply_markup=create_start_yes_no_kb()
+        )
 
 
 # Этот хендлер срабатывает на команду /service
@@ -69,20 +71,23 @@ async def support_command(message: Message, session: AsyncSession, bot: Bot):
     current_settings = await orm_get_settings(session, user.id)
     if current_settings is None:
         await orm_add_default_settings(session, user.id)
-    text = (f"{LEXICON_RU['/service']} {LEXICON_RU['current_work_duration']} "
-            f"{current_settings.work_duration} {LEXICON_RU['minutes']}\n{LEXICON_RU['current_break_duration']} "
-            f"{current_settings.break_duration} {LEXICON_RU['minutes']}")
-    reply_markup = create_service_kb()
-    await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
-    await send_message_and_delete_last(bot, message.chat.id, text, reply_markup)
+    await bot.send_message(
+        chat_id=message.chat.id,
+        text=(f"{LEXICON_RU['/service']}{LEXICON_RU['current_work_duration']} "
+              f"{current_settings.work_duration} {LEXICON_RU['minutes']}\n{LEXICON_RU['current_break_duration']} "
+              f"{current_settings.break_duration} {LEXICON_RU['minutes']}"),
+        reply_markup=create_service_kb()
+    )
 
 
+# Этот хендлер срабатывает на команду /contacts
 @router.message(Command('contacts'))
 async def contacts_command(message: Message, bot: Bot):
-    text = LEXICON_RU['/contacts']
-    reply_markup = common_keyboard
-    await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
-    await send_message_and_delete_last(bot, message.chat.id, text, reply_markup)
+    await bot.send_message(
+        chat_id=message.chat.id,
+        text=LEXICON_RU['/contacts'],
+        reply_markup=common_keyboard
+    )
 
 
 # Этот хендлер срабатывает на ответ "Да" в начале работы бота
@@ -337,22 +342,22 @@ async def process_period_statistics(callback: CallbackQuery, session: AsyncSessi
 # Этот хендлер срабатывает на кнопку "Отмена" и сбрасывает состояние FSM
 @router.callback_query(F.data == 'cancel')
 async def process_cancel_press(callback: CallbackQuery, state: FSMContext, bot: Bot):
-    await send_message_and_delete_last(
-        bot,
-        callback.message.chat.id,
+    await bot.send_message(
+        chat_id=callback.message.chat.id,
         text=LEXICON_RU['choose_action'],
-        reply_markup=common_keyboard)
+        reply_markup=common_keyboard
+    )
     await state.clear()
 
 
 # Этот хендлер срабатывает на кнопку "Задать длительность задачи" и переводит бота в FSM состояние set_work_duration_time
 @router.callback_query(F.data == 'edit_work_time')
 async def process_edit_work_time(callback: CallbackQuery, state: FSMContext, bot: Bot):
-    await send_message_and_delete_last(
-        bot,
-        callback.message.chat.id,
+    await bot.send_message(
+        chat_id=callback.message.chat.id,
         text=LEXICON_RU['give_new_work_time'],
-        reply_markup=create_service_kb())
+        reply_markup=create_service_kb()
+    )
     await state.set_state(FSMGetTaskName.set_break_duration_time)
     await state.set_state(FSMGetTaskName.set_work_duration_time)
 
@@ -366,11 +371,11 @@ async def process_get_work_time_from_message(message: Message, session: AsyncSes
     state_data = await state.get_data()
     new_work_duration = state_data['work_duration']
     await orm_update_settings(session, user.id, work_duration=new_work_duration, break_duration=current_settings.break_duration)
-    await send_message_and_delete_last(
-        bot,
-        message.chat.id,
+    await bot.send_message(
+        chat_id=message.from_user.id,
         text=f'{LEXICON_RU["new_work_time"]} {new_work_duration} {LEXICON_RU["minutes"]}',
-        reply_markup=create_service_kb())
+        reply_markup=create_service_kb()
+    )
     await state.set_state(FSMGetTaskName.set_break_duration_time)
     await state.clear()
 
@@ -378,11 +383,11 @@ async def process_get_work_time_from_message(message: Message, session: AsyncSes
 # Этот хендлер срабатывает на кнопку "Задать длительность перерыва" и переводит бота в FSM состояние set_break_duration_time
 @router.callback_query(F.data == 'edit_break_time')
 async def process_edit_break_time(callback: CallbackQuery, state: FSMContext, bot: Bot):
-    await send_message_and_delete_last(
-        bot,
-        callback.message.chat.id,
+    await bot.send_message(
+        chat_id=callback.message.chat.id,
         text=LEXICON_RU['give_new_break_time'],
-        reply_markup=create_service_kb())
+        reply_markup=create_service_kb()
+    )
     await state.set_state(FSMGetTaskName.set_break_duration_time)
 
 
@@ -395,11 +400,11 @@ async def process_get_break_time_from_message(message: Message, session: AsyncSe
     state_data = await state.get_data()
     new_break_duration = state_data['break_duration']
     await orm_update_settings(session, user.id, work_duration=current_settings.work_duration, break_duration=new_break_duration)
-    await send_message_and_delete_last(
-        bot,
-        message.chat.id,
+    await bot.send_message(
+        chat_id=message.chat.id,
         text=f'{LEXICON_RU["new_break_duration"]} {new_break_duration} {LEXICON_RU["minutes"]}',
-        reply_markup=create_service_kb())
+        reply_markup=create_service_kb()
+    )
     await state.clear()
 
 
@@ -420,12 +425,12 @@ async def work_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, 
         unclosed = await orm_get_unclosed_work(session, db_user_id)
         if unclosed is not None and datetime.now() > unclosed.start_time + timedelta(seconds=delay):
             task = await orm_get_task_by_id(session, db_user_id, unclosed.task_id)
-            await send_message_and_delete_last(
-                bot,
-                message.chat.id,
+            await bot.send_message(
+                chat_id=message.chat.id,
                 text=f'{LEXICON_RU["time_to_close"]} {task.name}'
                      f'{LEXICON_RU["started_at"]} {unclosed.start_time.strftime("%H:%M")}',
-                reply_markup=create_stop_task_kb(task.name))
+                reply_markup=create_stop_task_kb(task.name)
+            )
 
 
 # Функция для таймера перерыва
@@ -436,11 +441,11 @@ async def rest_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, 
         unclosed = await orm_get_last_work(session, user_id)
         if unclosed is None or unclosed.end_time is not None:
             tasks = await orm_get_tasks(session, user_id)
-            await send_message_and_delete_last(
-                bot,
-                message.chat.id,
+            await bot.send_message(
+                chat_id=message.chat.id,
                 text=f'{LEXICON_RU["time_to_work"]} {delay // 60} {LEXICON_RU["minutes"]}',
-                reply_markup=create_tasks_keyboard(2, *tasks))
+                reply_markup=create_tasks_keyboard(2, *tasks)
+            )
 
 
 # функция для удаления старых сообщений
@@ -466,8 +471,8 @@ async def send_scheduled_stats(bot: Bot, session: AsyncSession, chat_id: int, db
             now = datetime.now().time()
 
         stats = await orm_get_day_stats(session, db_user, "today")
-        await send_message_and_delete_last(
-            bot,
-            chat_id,
+        await bot.send_message(
+            chat_id=chat_id,
             text=f"{LEXICON_RU['stats_for']} <strong>{LEXICON_RU['today'].lower()}</strong>\n\n{stats}",
-            reply_markup=create_stats_kb())
+            reply_markup=create_stats_kb()
+        )
