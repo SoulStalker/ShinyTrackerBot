@@ -176,12 +176,10 @@ def create_stats_kb(width: int = 4) -> InlineKeyboardMarkup:
             callback_data='yesterday'),
         InlineKeyboardButton(
             text=LEXICON_RU['week'],
-            callback_data='week'
-        ),
+            callback_data='week'),
         InlineKeyboardButton(
             text=LEXICON_RU['month'],
-            callback_data='month'
-        ),
+            callback_data='month'),
         width=width
     )
     kb_builder.row(
@@ -189,7 +187,7 @@ def create_stats_kb(width: int = 4) -> InlineKeyboardMarkup:
             text=LEXICON_RU['cancel'],
             callback_data='cancel'
         ))
-    return kb_builder.as_markup()
+    return kb_builder.as_markup(resize_keyboard=True)
 
 
 def create_cancel_kb() -> InlineKeyboardMarkup:

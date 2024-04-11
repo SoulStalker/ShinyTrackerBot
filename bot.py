@@ -22,10 +22,6 @@ class FSMGetTaskName(StatesGroup):
     # Состояние для ожидания нового длительности
     set_work_duration_time = State()
     set_break_duration_time = State()
-    # Состояние работы
-    working_process = State()
-    # Состояние перерыва
-    break_process = State()
 
 
 async def main():
