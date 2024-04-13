@@ -2,7 +2,7 @@ import asyncio
 from asyncio import create_task
 from datetime import datetime, time, timedelta
 
-from aiogram import F, Router, Bot
+from aiogram import F, Router, Bot, types
 from aiogram.filters import Command, CommandStart, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
@@ -476,3 +476,6 @@ async def send_scheduled_stats(bot: Bot, session: AsyncSession, chat_id: int, db
             text=f"{LEXICON_RU['stats_for']} <strong>{LEXICON_RU['today'].lower()}</strong>\n\n{stats}",
             reply_markup=create_stats_kb()
         )
+        # await bot.send_photo(
+        #     chat_id=chat_id,
+        #     photo=types.InputFile(buf))
