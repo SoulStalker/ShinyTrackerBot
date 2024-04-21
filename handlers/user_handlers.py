@@ -253,7 +253,7 @@ async def warning_incorrect_task(message: Message):
 async def process_choose_task(callback: CallbackQuery, session: AsyncSession):
     user = await orm_get_user_by_id(session, callback.from_user.id)
     tasks = await orm_get_tasks(session, user.id)
-    await callback.message.edit_text(
+    await callback.message.answer(
         text=LEXICON_RU['/choose_category'],
         reply_markup=create_tasks_keyboard(
             2,
@@ -298,16 +298,11 @@ async def process_stop(callback: CallbackQuery, session: AsyncSession, bot: Bot)
             2,
             *tasks)
     )
-    # await callback.message.edit_text(
-    #     text=f"{LEXICON_RU['task for category']} {callback.data[:-5]} "
-    #          f"{LEXICON_RU['is stopped']}{datetime.now().time().strftime('%H:%M')}\n\n{LEXICON_RU['/choose_category']}",
-    #     reply_markup=create_tasks_keyboard(
-    #         2,
-    #         *tasks)
-    # )
-    stats = await orm_get_day_stats(session, user.id, "today")
-    await callback.message.edit_text(
-        text=f"{LEXICON_RU['stats_for']} <strong>{LEXICON_RU['today'].lower()}</strong>\n\n{stats}",
+    stats, stats_file_path = await orm_get_day_stats(session, user.id, "today")
+    photo = FSInputFile(stats_file_path, 'stats.png')
+    await callback.message.answer_photo(
+        photo=photo,
+        caption=f"{LEXICON_RU['stats_for']} <strong>{LEXICON_RU['today'].lower()}</strong>\n\n{stats}",
         reply_markup=create_stats_kb()
     )
 
@@ -338,8 +333,10 @@ async def statistics(callback: CallbackQuery, session: AsyncSession):
 @router.callback_query(IsInPeriods())
 async def process_period_statistics(callback: CallbackQuery, session: AsyncSession):
     user = await orm_get_user_by_id(session, callback.from_user.id)
-    stats = await orm_get_day_stats(session, user.id, callback.data)
-    await callback.message.edit_text(
+    stats, stats_file_path = await orm_get_day_stats(session, user.id, callback.data)
+    photo = FSInputFile(stats_file_path, 'stats.png')
+    await callback.message.answer_photo(
+        photo=photo,
         text=f"{LEXICON_RU['stats_for']} <strong>{LEXICON_RU[callback.data].lower()}</strong>\n\n{stats}",
         reply_markup=create_stats_kb()
     )
@@ -464,12 +461,11 @@ async def send_scheduled_stats(bot: Bot, session: AsyncSession, chat_id: int, db
             await asyncio.sleep(1)
             now = datetime.now().time()
 
-        stats = await orm_get_day_stats(session, db_user, "today")
-        await bot.send_message(
+        stats, stats_file_path = await orm_get_day_stats(session, db_user, "today")
+        photo = FSInputFile(stats_file_path, 'stats.png')
+        await bot.send_photo(
+            photo=photo,
             chat_id=chat_id,
-            text=f"{LEXICON_RU['stats_for']} <strong>{LEXICON_RU['today'].lower()}</strong>\n\n{stats}",
+            caption=f"{LEXICON_RU['stats_for']} <strong>{LEXICON_RU['today'].lower()}</strong>\n\n{stats}",
             reply_markup=create_stats_kb()
         )
-        # await bot.send_photo(
-        #     chat_id=chat_id,
-        #     photo=types.InputFile(buf))

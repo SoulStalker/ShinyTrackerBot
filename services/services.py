@@ -1,16 +1,11 @@
 import matplotlib.pyplot as plt
-import io
 
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta
 
-from aiogram import Bot
-from aiogram.types import Message
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import session
 
 from database.models import Works, Task
-from database.orm_query import orm_get_unclosed_work, orm_get_user_by_id
 from lexicon.lexicon import LEXICON_RU
 
 
