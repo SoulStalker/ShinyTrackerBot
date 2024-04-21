@@ -84,15 +84,13 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
             return_message += f'{"-" * (max_name_length + 1)}\n'
         print(return_message)
 
-    buf = io.BytesIO()
     plt.figure(figsize=(8, 8))
     plt.pie([float(i.total_seconds()) for i in result.values()], labels=result.keys(), autopct='%1.1f%%', startangle=90)
-    plt.title(return_message)
-    plt.savefig(buf, format='png')
-    plt.show()
-    buf.seek(0)
+    plt.axis("equal")
+    file_path = "services/stats.png"
+    plt.savefig(file_path, format='png', bbox_inches="tight")
 
-    return return_message
+    return return_message, file_path
 
 
 # Функция для форматирования времени
@@ -102,9 +100,4 @@ async def get_formatted_time(delta: timedelta) -> str:
     seconds = int(delta.total_seconds() % 60)
 
     formatted_time = f'{hours:02}:{minutes:02}:{seconds:02}'
-
     return formatted_time
-
-
-# Тут будут храниться id сообщений бота для удаления
-bot_messages_ids = {}

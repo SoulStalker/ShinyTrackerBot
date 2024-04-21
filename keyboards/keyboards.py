@@ -184,6 +184,11 @@ def create_stats_kb(width: int = 4) -> InlineKeyboardMarkup:
     )
     kb_builder.row(
         InlineKeyboardButton(
+            text=LEXICON_RU['choose_category'],
+            callback_data='choose_category'
+        ))
+    kb_builder.row(
+        InlineKeyboardButton(
             text=LEXICON_RU['cancel'],
             callback_data='cancel'
         ))

@@ -1,11 +1,11 @@
 import asyncio
-from asyncio import create_task
+
 from datetime import datetime, time, timedelta
 
-from aiogram import F, Router, Bot, types
+from aiogram import F, Router, Bot
 from aiogram.filters import Command, CommandStart, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, FSInputFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from keyboards.keyboards import (common_keyboard, create_tasks_keyboard, create_add_task_kb,
@@ -19,7 +19,7 @@ from database.orm_query import (orm_get_user_by_id, orm_add_user, orm_add_task, 
                                 orm_remove_task, orm_update_work, orm_stop_work, orm_edit_task,
                                 orm_get_settings, orm_update_settings, orm_add_default_settings,
                                 orm_get_unclosed_work, orm_get_last_work, orm_get_task_by_id)
-from services.services import orm_get_day_stats, bot_messages_ids
+from services.services import orm_get_day_stats
 from bot import FSMGetTaskName
 
 router = Router()
@@ -27,19 +27,8 @@ new_task_name = None
 old_task_name = None
 work_task = None
 rest_task = None
+stats_task = None
 # Обрастаю глобальными переменными
-
-
-# # Функция для удаления старого и отправки нового сообщения
-# async def send_message_and_delete_last(bot, chat_id, text, reply_markup=None):
-#     # Удаляем предыдущее сообщение пользователя, если оно есть
-#     for chat_id in bot_messages_ids:
-#         try:
-#             await bot.delete_message(chat_id=chat_id, message_id=bot_messages_ids[chat_id])
-#         except Exception as err:
-#             print(err)
-#     msg = await bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
-#     bot_messages_ids[chat_id] = msg.message_id
 
 
 # Этот хендлер срабатывает на команду /start и создает пользователя в базе данных
@@ -274,7 +263,7 @@ async def process_choose_task(callback: CallbackQuery, session: AsyncSession):
 # Этот хендлер срабатывает на нажатие на задачу в списке и запускает работу по задаче
 @router.callback_query(ShowUsersTasks())
 async def process_start_task(callback: CallbackQuery, session: AsyncSession, bot: Bot, state: FSMContext):
-    global work_task
+    global work_task, stats_task
     chosen_task = callback.data
     user = await orm_get_user_by_id(session, callback.from_user.id)
     await orm_update_work(session, chosen_task, user.id)
@@ -284,16 +273,22 @@ async def process_start_task(callback: CallbackQuery, session: AsyncSession, bot
     )
     current_settings = await orm_get_settings(session, user.id)
     period = current_settings.work_duration * 60
-    await create_task(send_scheduled_stats(bot, session, callback.from_user.id, user.id, time(18, 5)))
-    if work_task and not work_task.done():
+    if stats_task:
+        stats_task.cancel()
+    stats_task = asyncio.create_task(send_scheduled_stats(bot, session, callback.from_user.id, user.id, time(18, 5)))
+    print(stats_task)
+
+    if work_task:
         work_task.cancel()
-    work_task = await create_task(work_time_pomodoro(bot, session, callback.message, user.id, period))
+    if rest_task:
+        rest_task.cancel()
+    work_task = asyncio.create_task(work_time_pomodoro(bot, session, callback.message, user.id, period))
 
 
 # Этот хендлер срабатывает на нажатие остановки задачи
 @router.callback_query(IsStopTasks())
 async def process_stop(callback: CallbackQuery, session: AsyncSession, bot: Bot):
-    global rest_task
+    global rest_task, work_task
     user = await orm_get_user_by_id(session, callback.from_user.id)
     tasks = await orm_get_tasks(session, user.id)
     await orm_stop_work(session, user.id)
@@ -303,27 +298,38 @@ async def process_stop(callback: CallbackQuery, session: AsyncSession, bot: Bot)
             2,
             *tasks)
     )
+    # await callback.message.edit_text(
+    #     text=f"{LEXICON_RU['task for category']} {callback.data[:-5]} "
+    #          f"{LEXICON_RU['is stopped']}{datetime.now().time().strftime('%H:%M')}\n\n{LEXICON_RU['/choose_category']}",
+    #     reply_markup=create_tasks_keyboard(
+    #         2,
+    #         *tasks)
+    # )
+    stats = await orm_get_day_stats(session, user.id, "today")
     await callback.message.edit_text(
-        text=f"{LEXICON_RU['task for category']} {callback.data[:-5]} "
-             f"{LEXICON_RU['is stopped']}{datetime.now().time().strftime('%H:%M')}\n\n{LEXICON_RU['/choose_category']}",
-        reply_markup=create_tasks_keyboard(
-            2,
-            *tasks)
+        text=f"{LEXICON_RU['stats_for']} <strong>{LEXICON_RU['today'].lower()}</strong>\n\n{stats}",
+        reply_markup=create_stats_kb()
     )
+
     current_settings = await orm_get_settings(session, user.id)
     period = current_settings.break_duration * 60
-    if rest_task and not rest_task.done():
+    if rest_task:
         rest_task.cancel()
-    rest_task = await create_task(rest_time_pomodoro(bot, session, callback.message, user.id, period))
+    if work_task:
+        work_task.cancel()
+    rest_task = asyncio.create_task(rest_time_pomodoro(bot, session, callback.message, user.id, period))
+    print(dir(rest_task))
 
 
 # Этот хендлер срабатывает на нажатие кнопки статистики и возвращает клавиатуру с периодами
 @router.callback_query(F.data == 'statistics')
 async def statistics(callback: CallbackQuery, session: AsyncSession):
     user = await orm_get_user_by_id(session, callback.from_user.id)
-    stats = await orm_get_day_stats(session, user.id, "today")
-    await callback.message.edit_text(
-        text=f"{LEXICON_RU['stats_for']} <strong>{LEXICON_RU['today'].lower()}</strong>\n\n{stats}",
+    stats, stats_file_path = await orm_get_day_stats(session, user.id, "today")
+    photo = FSInputFile(stats_file_path, 'stats.png')
+    await callback.message.answer_photo(
+        photo=photo,
+        caption=f"{LEXICON_RU['stats_for']} <strong>{LEXICON_RU['today'].lower()}</strong>\n\n{stats}",
         reply_markup=create_stats_kb()
     )
 
@@ -446,18 +452,6 @@ async def rest_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, 
                 text=f'{LEXICON_RU["time_to_work"]} {delay // 60} {LEXICON_RU["minutes"]}',
                 reply_markup=create_tasks_keyboard(2, *tasks)
             )
-
-
-# функция для удаления старых сообщений
-async def process_do_the_chores(bot: Bot):
-    await asyncio.sleep(1200)
-    for chat in bot_messages_ids.keys():
-        for message_id in bot_messages_ids[chat]:
-            try:
-                await bot.delete_message(chat_id=chat, message_id=message_id)
-            except Exception as err:
-                print(err)
-    bot_messages_ids.clear()
 
 
 # Функция отправки статистики по расписанию
