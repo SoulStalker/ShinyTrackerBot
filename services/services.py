@@ -85,7 +85,7 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
         print(return_message)
 
     plt.figure(figsize=(8, 8))
-    plt.pie([float(i.total_seconds()) for i in result.values()], labels=result.keys(), autopct='%1.1f%%', startangle=90)
+    plt.pie([float(i.total_seconds()) for i in list(result.values())[:-1]], labels=list(result.keys())[:-1], autopct='%1.1f%%', startangle=90)
     plt.axis("equal")
     file_path = "services/stats.png"
     plt.savefig(file_path, format='png', bbox_inches="tight")
