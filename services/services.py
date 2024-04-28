@@ -1,4 +1,5 @@
-import matplotlib.pyplot as plt
+from matplotlib import pyplot as plt
+from matplotlib.cm import get_cmap
 
 from datetime import datetime, timedelta
 
@@ -79,8 +80,19 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
             return_message += f'{"-" * (max_name_length + 1)}\n'
         print(return_message)
 
+    cmap = get_cmap("tab20")
+    # Цветова палитра matplotlib
+    colors = [cmap(i) for i in range(len(result))]
+    # Количество цветов в палитре должно быть не меньше количества ключей
+
     plt.figure(figsize=(8, 8))
-    plt.pie([float(i.total_seconds()) for i in list(result.values())[:-1]], labels=list(result.keys())[:-1], autopct='%1.1f%%', startangle=90)
+    plt.pie(
+        [float(i.total_seconds()) for i in list(result.values())[:-1]],
+        labels=list(result.keys())[:-1],
+        autopct='%1.1f%%',
+        startangle=90,
+        colors=colors,
+        )
     plt.axis("equal")
     file_path = "services/stats.png"
     plt.savefig(file_path, format='png', bbox_inches="tight")
@@ -96,3 +108,5 @@ async def get_formatted_time(delta: timedelta) -> str:
 
     formatted_time = f'{hours:02}:{minutes:02}:{seconds:02}'
     return formatted_time
+
+
