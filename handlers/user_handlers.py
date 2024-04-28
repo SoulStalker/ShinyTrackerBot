@@ -337,7 +337,7 @@ async def process_period_statistics(callback: CallbackQuery, session: AsyncSessi
     photo = FSInputFile(stats_file_path, 'stats.png')
     await callback.message.answer_photo(
         photo=photo,
-        text=f"{LEXICON_RU['stats_for']} <strong>{LEXICON_RU[callback.data].lower()}</strong>\n\n{stats}",
+        caption=f"{LEXICON_RU['stats_for']} <strong>{LEXICON_RU[callback.data].lower()}</strong>\n\n{stats}",
         reply_markup=create_stats_kb()
     )
 
