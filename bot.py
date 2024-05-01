@@ -19,7 +19,9 @@ class FSMGetTaskName(StatesGroup):
     fill_task_name = State()
     # Состояние для ожидания нового названия
     set_task_name = State()
-    # Состояние для ожидания нового длительности
+    # Состояние для ожидания нового цвета
+    set_task_color = State()
+    # Состояние для ожидания новой длительности
     set_work_duration_time = State()
     set_break_duration_time = State()
 

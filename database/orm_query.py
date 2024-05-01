@@ -68,7 +68,7 @@ async def orm_edit_task(session: AsyncSession, task: dict) -> None:
     query = (update(Task).where(
         (Task.user_id == task['user_id']) & (Task.name == task['old_task_name'])
     ).
-             values(name=task['new_task_name']))
+             values(name=task['new_task_name'], color=task['new_task_color']))
     await session.execute(query)
     await session.commit()
 

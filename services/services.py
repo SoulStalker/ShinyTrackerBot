@@ -18,8 +18,8 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
         Works.start_time,
         Works.end_time,
     ).join(Task, Task.id == Works.task_id).order_by(Task.name).
-    where(
-        Works.user_id == user_id,
+        where(
+            Works.user_id == user_id,
         ))
     # Фильтр по дате, где дата больше или равно текущий год, месяц, день
     today = datetime.today()
@@ -92,7 +92,7 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
         autopct='%1.1f%%',
         startangle=90,
         colors=colors,
-        )
+    )
     plt.axis("equal")
     file_path = "services/stats.png"
     plt.savefig(file_path, format='png', bbox_inches="tight")
@@ -108,5 +108,3 @@ async def get_formatted_time(delta: timedelta) -> str:
 
     formatted_time = f'{hours:02}:{minutes:02}:{seconds:02}'
     return formatted_time
-
-
