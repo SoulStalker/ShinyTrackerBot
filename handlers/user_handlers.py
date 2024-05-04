@@ -11,23 +11,25 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from keyboards.keyboards import (common_keyboard, create_tasks_keyboard, create_add_task_kb,
                                  create_del_tasks_kb, create_stop_task_kb, create_start_yes_no_kb,
                                  create_stats_kb, create_cancel_kb, create_del_or_edit_tasks_kb,
-                                 create_edit_tasks_kb, create_service_kb)
+                                 create_edit_tasks_kb, create_service_kb, create_color_or_name_kb)
 from lexicon.lexicon import LEXICON_RU
 from filters.filters import (IsUsersDelTasks, ShowUsersTasks, IsStopTasks, IsInPeriods,
                              IsUsersEditTasks)
 from database.orm_query import (orm_get_user_by_id, orm_add_user, orm_add_task, orm_get_tasks,
                                 orm_remove_task, orm_update_work, orm_stop_work, orm_edit_task,
                                 orm_get_settings, orm_update_settings, orm_add_default_settings,
-                                orm_get_unclosed_work, orm_get_last_work, orm_get_task_by_id)
+                                orm_get_unclosed_work, orm_get_last_work, orm_get_task_by_id, orm_get_task_by_name)
 from services.services import orm_get_day_stats
 from bot import FSMGetTaskName
 
 router = Router()
 new_task_name = None
-old_task_name = None
+task_name = None
+task_color = None
 work_task = None
 rest_task = None
 stats_task = None
+current_task = None
 # Обрастаю глобальными переменными
 
 
@@ -175,7 +177,7 @@ async def process_press_del_tasks(callback: CallbackQuery, session: AsyncSession
 # Этот хендлер срабатывает на нажатие кнопки "Изменить задачи"
 # в ответ выдается инлайн клавиатура с задачами
 @router.callback_query(F.data == 'edit_task')
-async def del_task(callback: CallbackQuery, session: AsyncSession):
+async def edit_task(callback: CallbackQuery, session: AsyncSession):
     user = await orm_get_user_by_id(session, callback.from_user.id)
     tasks = await orm_get_tasks(session, user.id)
     if tasks:
@@ -193,42 +195,84 @@ async def del_task(callback: CallbackQuery, session: AsyncSession):
 
 # Этот хендлер срабатывает на нажатие на задачу в инлайне редактирования задач
 @router.callback_query(IsUsersEditTasks())
-async def process_press_edit_tasks(callback: CallbackQuery, state: FSMContext):
-    global old_task_name
-    old_task_name = callback.data[:-4]
+async def process_press_edit_tasks(callback: CallbackQuery):
+    global task_name
+    task_name = callback.data[:-4]
     await callback.message.edit_text(
-        text=f"{LEXICON_RU['new_task_name']} {callback.data[:-4]}",
+        text=f"{LEXICON_RU['name_or_color']}",
+        reply_markup=create_color_or_name_kb()
+    )
+
+
+# Этот хендлер срабатывает на нажатие кнопки Называние в изменении задачи
+@router.callback_query(F.data == 'edit_task_name')
+async def edit_task_name(callback: CallbackQuery, state: FSMContext):
+    global task_name
+    await callback.message.edit_text(
+        text=f"{LEXICON_RU['new_task_name']} {task_name}"
     )
     await state.set_state(FSMGetTaskName.set_task_name)
+
+
+# Этот хендлер срабатывает на нажатие кнопки Цвет в изменении задачи
+@router.callback_query(F.data == 'edit_task_color')
+async def edit_task_color(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text(
+        text=f"{LEXICON_RU['new_task_color']}"
+    )
+    await state.set_state(FSMGetTaskName.set_task_color)
 
 
 # Этот хендлер срабатывает на сообщения в FSM состоянии set_task_name
 @router.message(StateFilter(FSMGetTaskName.set_task_name), F.text.isalpha())
 async def process_set_new_task_name(message: Message, session: AsyncSession, state: FSMContext):
-    global new_task_name
-    await state.update_data(task_name=message.text)
-    state_data = await state.get_data()
-    new_task_name = state_data['task_name']
-    if await orm_get_user_by_id(session, message.from_user.id):
+    if db_user := await orm_get_user_by_id(session, message.from_user.id):
+        global current_task
+        current_task = await orm_get_task_by_name(session, db_user.id, task_name)
+        await state.update_data(task_name=message.text)
+        state_data = await state.get_data()
+        current_task.name = state_data['task_name']
         await message.answer(
-            text=f'{LEXICON_RU["new_name_of_task"]} {new_task_name}',
+            text=f'{LEXICON_RU["new_name_of_task"]} {task_name}',
             reply_markup=create_start_yes_no_kb(),
-        )
+            )
+    else:
+        await message.answer(text=LEXICON_RU['no_user'])
+
+
+# Этот хендлер срабатывает на сообщения в FSM состоянии set_task_name
+@router.message(StateFilter(FSMGetTaskName.set_task_color), F.text.isalpha())
+async def process_set_new_task_name(message: Message, session: AsyncSession, state: FSMContext):
+    if db_user := await orm_get_user_by_id(session, message.from_user.id):
+        global current_task
+        current_task = await orm_get_task_by_name(session, db_user.id, task_name)
+        await state.update_data(task_color=message.text)
+        state_data = await state.get_data()
+        current_task.color = state_data['task_color']
+        print(FSMContext)
+        await message.answer(
+            text=f'{LEXICON_RU["new_color_of_task"]} {current_task.color}',
+            reply_markup=create_start_yes_no_kb(),
+            )
     else:
         await message.answer(text=LEXICON_RU['no_user'])
 
 
 # Этот хендлер срабатывает на кнопку изменить в инлайне изменения задачи в FSM состоянии set_task_name
-@router.callback_query(StateFilter(FSMGetTaskName.set_task_name), F.data == 'yes')
+@router.callback_query(StateFilter(FSMGetTaskName.set_task_name, FSMGetTaskName.set_task_color), F.data == 'yes')
 async def process_really_edit_press(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
+    print("we are here")
     user = await orm_get_user_by_id(session, callback.from_user.id)
-    task = {'user_id': user.id, 'old_task_name': old_task_name, 'new_task_name': new_task_name}
-
-    if old_task_name in await orm_get_tasks(session, user.id):
+    global current_task
+    print(current_task.id, current_task.color, current_task.name)
+    if task_name in await orm_get_tasks(session, user.id):
         await callback.message.edit_text(LEXICON_RU['task_exist'])
-        await orm_edit_task(session, task)
+        await orm_edit_task(session, {
+            'id': current_task.id,
+            'name': current_task.name,
+            'color': current_task.color})
         await callback.message.edit_text(
-            text=f"{LEXICON_RU['task_edited']} {new_task_name}\n",
+            text=f"{LEXICON_RU['task_edited']} {current_task.name}\n",
             reply_markup=common_keyboard
         )
     else:
@@ -262,7 +306,7 @@ async def process_choose_task(callback: CallbackQuery, session: AsyncSession):
 
 # Этот хендлер срабатывает на нажатие на задачу в списке и запускает работу по задаче
 @router.callback_query(ShowUsersTasks())
-async def process_start_task(callback: CallbackQuery, session: AsyncSession, bot: Bot, state: FSMContext):
+async def process_start_task(callback: CallbackQuery, session: AsyncSession, bot: Bot):
     global work_task, stats_task
     chosen_task = callback.data
     user = await orm_get_user_by_id(session, callback.from_user.id)

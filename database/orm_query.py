@@ -51,6 +51,14 @@ async def orm_get_task_by_id(session: AsyncSession, user_id: int, task_id: int) 
     return task
 
 
+# Функция получения задачи по name
+async def orm_get_task_by_name(session: AsyncSession, db_user_id: int, task_name: str) -> Optional[Task]:
+    query = select(Task).where(and_(Task.user_id == db_user_id, Task.name == task_name))
+    tasks = await session.execute(query)
+    task = tasks.scalars().first()
+    return task
+
+
 # Функция удаляет задачу из базы по названию
 async def orm_remove_task(session: AsyncSession, task_name: str) -> str:
     success = LEXICON_RU['success']
@@ -65,10 +73,8 @@ async def orm_remove_task(session: AsyncSession, task_name: str) -> str:
 
 # Функция изменяет задачу из базы по названию
 async def orm_edit_task(session: AsyncSession, task: dict) -> None:
-    query = (update(Task).where(
-        (Task.user_id == task['user_id']) & (Task.name == task['old_task_name'])
-    ).
-             values(name=task['new_task_name'], color=task['new_task_color']))
+    query = (update(Task).where(Task.id == task['id']).
+             values(name=task['name'], color=task['color']))
     await session.execute(query)
     await session.commit()
 
