@@ -1,5 +1,7 @@
+from string import ascii_letters, digits
+
 from aiogram.filters import BaseFilter
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.orm_query import orm_get_user_by_id, orm_get_tasks
@@ -45,3 +47,10 @@ class IsInPeriods(BaseFilter):
     async def __call__(self, callback: CallbackQuery) -> bool:
         periods = ('month', 'week', 'yesterday', 'today')
         return callback.data in periods
+
+
+# Фильтра для названий задач и цветов
+class IsCorrectSymbols(BaseFilter):
+    async def __call__(self, message: Message) -> bool:
+        correct_symbols = '#_ -' + ascii_letters + digits
+        return all(i in correct_symbols for i in message.text)
