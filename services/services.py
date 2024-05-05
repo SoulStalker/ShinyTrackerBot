@@ -2,7 +2,7 @@ from matplotlib import pyplot as plt
 
 from datetime import datetime, timedelta
 
-from matplotlib.colors import TABLEAU_COLORS
+from matplotlib.colors import CSS4_COLORS
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -113,8 +113,8 @@ async def get_formatted_time(delta: timedelta) -> str:
 # Функция для получения цвета задачи из базы
 async def get_colors_for_tasks(session: AsyncSession, db_user_id: int) -> dict:
     tasks = await orm_get_tasks(session, db_user_id)
-    # Берем цвета из списка табло на случай если не заполнен цвет в базе
-    colors = list(x[4:] for x in TABLEAU_COLORS)
+    # Берем цвета из списка css4 на случай если не заполнен цвет в базе
+    colors = list(CSS4_COLORS)
     color_map = {}
     color_index = 0
     for task in tasks:
