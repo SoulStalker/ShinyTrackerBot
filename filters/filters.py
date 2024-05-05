@@ -4,14 +4,14 @@ from aiogram.filters import BaseFilter
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.orm_query import orm_get_user_by_id, orm_get_tasks
+from database.orm_query import orm_get_user_by_id, orm_get_tasks_list
 
 
 # Фильтр для отлова задач на удаление из сохраненного списка пользователя
 class IsUsersDelTasks(BaseFilter):
     async def __call__(self, callback: CallbackQuery, session: AsyncSession) -> bool:
         user = await orm_get_user_by_id(session, callback.from_user.id)
-        tasks = await orm_get_tasks(session, user.id)
+        tasks = await orm_get_tasks_list(session, user.id)
         return (callback.data[-3:] == 'del'
                 and callback.data[:-3] in tasks)
 
@@ -20,7 +20,7 @@ class IsUsersDelTasks(BaseFilter):
 class IsUsersEditTasks(BaseFilter):
     async def __call__(self, callback: CallbackQuery, session: AsyncSession) -> bool:
         user = await orm_get_user_by_id(session, callback.from_user.id)
-        tasks = await orm_get_tasks(session, user.id)
+        tasks = await orm_get_tasks_list(session, user.id)
         return (callback.data[-4:] == 'edit'
                 and callback.data[:-4] in tasks)
 
@@ -29,7 +29,7 @@ class IsUsersEditTasks(BaseFilter):
 class ShowUsersTasks(BaseFilter):
     async def __call__(self, callback: CallbackQuery, session: AsyncSession) -> bool:
         user = await orm_get_user_by_id(session, callback.from_user.id)
-        tasks = await orm_get_tasks(session, user.id)
+        tasks = await orm_get_tasks_list(session, user.id)
         return callback.data in tasks
 
 
@@ -37,7 +37,7 @@ class ShowUsersTasks(BaseFilter):
 class IsStopTasks(BaseFilter):
     async def __call__(self, callback: CallbackQuery, session: AsyncSession) -> bool:
         user = await orm_get_user_by_id(session, callback.from_user.id)
-        tasks = await orm_get_tasks(session, user.id)
+        tasks = await orm_get_tasks_list(session, user.id)
         return (callback.data[-5:] == '_stop'
                 and callback.data[:-5] in tasks)
 

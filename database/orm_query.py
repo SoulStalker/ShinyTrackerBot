@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any, Sequence
 
-from sqlalchemy import select, update, delete, and_, desc, null
+from sqlalchemy import select, update, delete, and_, desc, null, Row, RowMapping, Result, CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models import User, Task, Works, Settings
@@ -35,8 +35,16 @@ async def orm_add_task(session: AsyncSession, data: dict) -> None:
     await session.commit()
 
 
+# Функция получения задач
+async def orm_get_tasks(session: AsyncSession, user_id: int) -> Sequence[Row[Any]]:
+    query = select(Task).where(Task.user_id == user_id)
+    tasks = await session.execute(query)
+    tasks = tasks.scalars().unique().all()
+    return tasks
+
+
 # Функция получения списка задач
-async def orm_get_tasks(session: AsyncSession, user_id: int) -> list[Task]:
+async def orm_get_tasks_list(session: AsyncSession, user_id: int) -> list[Task]:
     query = select(Task.name).where(Task.user_id == user_id)
     tasks = await session.execute(query)
     tasks = tasks.scalars().all()

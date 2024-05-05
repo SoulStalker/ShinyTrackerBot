@@ -15,7 +15,7 @@ from keyboards.keyboards import (common_keyboard, create_tasks_keyboard, create_
 from lexicon.lexicon import LEXICON_RU
 from filters.filters import (IsUsersDelTasks, ShowUsersTasks, IsStopTasks, IsInPeriods,
                              IsUsersEditTasks, IsCorrectSymbols)
-from database.orm_query import (orm_get_user_by_id, orm_add_user, orm_add_task, orm_get_tasks,
+from database.orm_query import (orm_get_user_by_id, orm_add_user, orm_add_task, orm_get_tasks_list,
                                 orm_remove_task, orm_update_work, orm_stop_work, orm_edit_task,
                                 orm_get_settings, orm_update_settings, orm_add_default_settings,
                                 orm_get_unclosed_work, orm_get_last_work, orm_get_task_by_id, orm_get_task_by_name)
@@ -120,7 +120,7 @@ async def process_add_task(message: Message, session: AsyncSession, state: FSMCo
 async def process_really_add_press(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
     user = await orm_get_user_by_id(session, callback.from_user.id)
     task = {'user_id': user.id, 'task_name': new_task_name}
-    if new_task_name in await orm_get_tasks(session, user.id):
+    if new_task_name in await orm_get_tasks_list(session, user.id):
         await callback.message.edit_text(LEXICON_RU['task_exist'])
     else:
         await orm_add_task(session, task)
@@ -146,7 +146,7 @@ async def process_edit_task(callback: CallbackQuery):
 @router.callback_query(F.data == 'del_task')
 async def del_task(callback: CallbackQuery, session: AsyncSession):
     user = await orm_get_user_by_id(session, callback.from_user.id)
-    tasks = await orm_get_tasks(session, user.id)
+    tasks = await orm_get_tasks_list(session, user.id)
     if tasks:
         await callback.message.edit_text(
             text=LEXICON_RU['/edit_tasks'],
@@ -165,7 +165,7 @@ async def del_task(callback: CallbackQuery, session: AsyncSession):
 async def process_press_del_tasks(callback: CallbackQuery, session: AsyncSession):
     user = await orm_get_user_by_id(session, callback.from_user.id)
     await orm_remove_task(session, callback.data[:-3])
-    new_tasks = await orm_get_tasks(session, user.id)
+    new_tasks = await orm_get_tasks_list(session, user.id)
     await callback.message.edit_text(
         text=LEXICON_RU['/edit_tasks'],
         reply_markup=create_del_tasks_kb(*new_tasks)
@@ -179,7 +179,7 @@ async def process_press_del_tasks(callback: CallbackQuery, session: AsyncSession
 @router.callback_query(F.data == 'edit_task')
 async def edit_task(callback: CallbackQuery, session: AsyncSession):
     user = await orm_get_user_by_id(session, callback.from_user.id)
-    tasks = await orm_get_tasks(session, user.id)
+    tasks = await orm_get_tasks_list(session, user.id)
     if tasks:
         await callback.message.edit_text(
             text=LEXICON_RU['chose_task_for_edit'],
@@ -262,7 +262,7 @@ async def process_set_new_task_color(message: Message, session: AsyncSession, st
 async def process_really_edit_press(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
     user = await orm_get_user_by_id(session, callback.from_user.id)
     global current_task
-    if task_name in await orm_get_tasks(session, user.id):
+    if task_name in await orm_get_tasks_list(session, user.id):
         await callback.message.edit_text(LEXICON_RU['task_exist'])
         await orm_edit_task(session, {
             'id': current_task.id,
@@ -293,7 +293,7 @@ async def warning_incorrect_task(message: Message):
 @router.callback_query(F.data == 'choose_category')
 async def process_choose_task(callback: CallbackQuery, session: AsyncSession):
     user = await orm_get_user_by_id(session, callback.from_user.id)
-    tasks = await orm_get_tasks(session, user.id)
+    tasks = await orm_get_tasks_list(session, user.id)
     await callback.message.answer(
         text=LEXICON_RU['/choose_category'],
         reply_markup=create_tasks_keyboard(
@@ -331,7 +331,7 @@ async def process_start_task(callback: CallbackQuery, session: AsyncSession, bot
 async def process_stop(callback: CallbackQuery, session: AsyncSession, bot: Bot):
     global rest_task, work_task
     user = await orm_get_user_by_id(session, callback.from_user.id)
-    tasks = await orm_get_tasks(session, user.id)
+    tasks = await orm_get_tasks_list(session, user.id)
     await orm_stop_work(session, user.id)
     await callback.message.edit_text(
         text=LEXICON_RU['/choose_category'],
@@ -484,7 +484,7 @@ async def rest_time_pomodoro(bot: Bot, session: AsyncSession, message: Message, 
         await asyncio.sleep(delay)
         unclosed = await orm_get_last_work(session, user_id)
         if unclosed is None or unclosed.end_time is not None:
-            tasks = await orm_get_tasks(session, user_id)
+            tasks = await orm_get_tasks_list(session, user_id)
             await bot.send_message(
                 chat_id=message.chat.id,
                 text=f'{LEXICON_RU["time_to_work"]} {delay // 60} {LEXICON_RU["minutes"]}',

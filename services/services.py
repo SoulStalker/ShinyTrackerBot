@@ -1,13 +1,14 @@
 from matplotlib import pyplot as plt
-from matplotlib.cm import get_cmap
 
 from datetime import datetime, timedelta
 
+from matplotlib.colors import TABLEAU_COLORS
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models import Works, Task
 from lexicon.lexicon import LEXICON_RU
+from database.orm_query import orm_get_tasks
 
 
 # Функция возвращает статистику за день если период 0 то за сегодня если есть цифра то с этой даты
@@ -18,9 +19,9 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
         Works.start_time,
         Works.end_time,
     ).join(Task, Task.id == Works.task_id).order_by(Task.name).
-        where(
-            Works.user_id == user_id,
-        ))
+    where(
+        Works.user_id == user_id,
+    ))
     # Фильтр по дате, где дата больше или равно текущий год, месяц, день
     today = datetime.today()
     if period == 'today':
@@ -67,6 +68,7 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
             result[key] += time_diff
         else:
             result[key] = time_diff
+
     # Добавляем итоговое значение для всех задач
     result = {k: v for k, v in sorted(result.items(), key=lambda item: item[1])}
     print('result: ', result)
@@ -80,10 +82,8 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
             return_message += f'{"-" * (max_name_length + 1)}\n'
         print(return_message)
 
-    cmap = get_cmap("tab20")
-    # Цветова палитра matplotlib
-    colors = [cmap(i) for i in range(len(result))]
-    # Количество цветов в палитре должно быть не меньше количества ключей
+    color_map = await get_colors_for_tasks(session, user_id)
+    colors = [color_map.get(k, "gray") for k in list(result.keys())[:-1]]
 
     plt.figure(figsize=(8, 8))
     plt.pie(
@@ -108,3 +108,19 @@ async def get_formatted_time(delta: timedelta) -> str:
 
     formatted_time = f'{hours:02}:{minutes:02}:{seconds:02}'
     return formatted_time
+
+
+# Функция для получения цвета задачи из базы
+async def get_colors_for_tasks(session: AsyncSession, db_user_id: int) -> dict:
+    tasks = await orm_get_tasks(session, db_user_id)
+    # Берем цвета из списка табло на случай если не заполнен цвет в базе
+    colors = list(x[4:] for x in TABLEAU_COLORS)
+    color_map = {}
+    color_index = 0
+    for task in tasks:
+        if getattr(task, 'color', None) is None:
+            task.color = colors[color_index]
+            # Циклическое использование цветов
+            color_index = (color_index + 1) % 20
+        color_map[task.name] = task.color
+    return color_map
