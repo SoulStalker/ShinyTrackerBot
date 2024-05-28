@@ -229,7 +229,7 @@ def create_del_or_edit_tasks_kb() -> InlineKeyboardMarkup:
     return kb_builder.as_markup()
 
 
-def create_color_or_name_kb() -> InlineKeyboardMarkup:
+def create_what_to_change_kb() -> InlineKeyboardMarkup:
     """
     Функция создает клавиатуру с вопросами менять цвет или название задачи
     :return: InlineKeyboardMarkup
@@ -241,7 +241,10 @@ def create_color_or_name_kb() -> InlineKeyboardMarkup:
             callback_data='edit_task_name'),
         InlineKeyboardButton(
             text=LEXICON_RU['edit_task_color'],
-            callback_data='edit_task_color')
+            callback_data='edit_task_color'),
+        InlineKeyboardButton(
+            text=LEXICON_RU['edit_task_target'],
+            callback_data='edit_task_target'),
     )
     kb_builder.row(InlineKeyboardButton(
         text=LEXICON_RU['cancel'],
