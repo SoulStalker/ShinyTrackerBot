@@ -21,6 +21,7 @@ class Task(Base):
     user_id = Column(Integer, ForeignKey('users.id'))
     name = Column(String, unique=True)
     color = Column(String, nullable=True)
+    target_time = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 

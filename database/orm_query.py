@@ -82,7 +82,7 @@ async def orm_remove_task(session: AsyncSession, task_name: str) -> str:
 # Функция изменяет задачу из базы по названию
 async def orm_edit_task(session: AsyncSession, task: dict) -> None:
     query = (update(Task).where(Task.id == task['id']).
-             values(name=task['name'], color=task['color']))
+             values(name=task['name'], color=task['color'], target_time=task['target_time']))
     await session.execute(query)
     await session.commit()
 

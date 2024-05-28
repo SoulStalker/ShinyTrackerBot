@@ -21,7 +21,7 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
     ).join(Task, Task.id == Works.task_id).order_by(Task.name).
     where(
         Works.user_id == user_id,
-    ))
+        ))
     # Фильтр по дате, где дата больше или равно текущий год, месяц, день
     today = datetime.today()
     if period == 'today':
@@ -71,12 +71,17 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
 
     # Добавляем итоговое значение для всех задач
     result = {k: v for k, v in sorted(result.items(), key=lambda item: item[1])}
-    print('result: ', result)
+
     result.setdefault(LEXICON_RU['total'], sum(result.values(), timedelta()))
+    targets_map = await get_targets_for_tasks(session, user_id)
+    # Цели выполнения задач будут добавлены в строку сообщения
     max_name_length = max(len(k) for k in result.keys())
     for i, (k, v) in enumerate(result.items()):
         padding = " " * (max_name_length - len(k))
-        return_message += f'<code>{k}{padding}: {await get_formatted_time(v)}</code>\n'
+        # Форматируем сообщение немного
+        return_message += (f'<code>{k}{padding}: {await get_formatted_time(v)} '
+                           f'{LEXICON_RU["target"]}: {targets_map.get(k, "")} '
+                           f'{LEXICON_RU["minutes"]}</code>\n')
         if i == len(result) - 2:
             print("-" * (max_name_length + 1))
             return_message += f'{"-" * (max_name_length + 1)}\n'
@@ -124,3 +129,14 @@ async def get_colors_for_tasks(session: AsyncSession, db_user_id: int) -> dict:
             color_index = (color_index + 1) % 20
         color_map[task.name] = task.color
     return color_map
+
+
+async def get_targets_for_tasks(session: AsyncSession, db_user_id: int) -> dict:
+    # Получаем цели по времени выполнения задач, если они заданы
+    tasks = await orm_get_tasks(session, db_user_id)
+    tasks_with_targets = {}
+    for task in tasks:
+        if getattr(task, 'target_time', None) is None:
+            task.target_time = LEXICON_RU['target_time_not_set']
+        tasks_with_targets[task.name] = task.target_time
+    return tasks_with_targets

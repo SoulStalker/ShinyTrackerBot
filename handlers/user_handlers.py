@@ -267,7 +267,8 @@ async def process_really_edit_press(callback: CallbackQuery, session: AsyncSessi
         await orm_edit_task(session, {
             'id': current_task.id,
             'name': current_task.name,
-            'color': current_task.color})
+            'color': current_task.color,
+            'target_time': current_task.target_time})
         await callback.message.edit_text(
             text=f"{LEXICON_RU['task_edited']} {current_task.name}\n",
             reply_markup=common_keyboard
