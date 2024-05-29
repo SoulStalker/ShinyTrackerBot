@@ -83,14 +83,14 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
     max_name_length = max(len(k) for k in result.keys())
     for i, (k, v) in enumerate(result.items()):
         padding = " " * (max_name_length - len(k))
-        # Форматируем сообщение немного
+        # Форматируем сообщение
         if targets_map.get(k, '') == '':
-            return_message += (f'<code>{k}{padding}: {await get_formatted_time(v)} '
+            return_message += (f'<code>{LEXICON_RU["not_set"]} {k}{padding}: {await get_formatted_time(v)}'
                                f'{LEXICON_RU["target"]}: {LEXICON_RU["target_time_not_set"]}</code>\n')
         else:
-            return_message += (f'<code>{k}{padding}: {await get_formatted_time(v)} '
-                               f'{LEXICON_RU["target"]}: {targets_map.get(k, "")*multiplier} '
-                               f'{LEXICON_RU["minutes"]}</code>\n')
+            return_message += (f'<code>{LEXICON_RU[await goal_achieved(v, targets_map[k])]} {k}{padding}: '
+                               f'{await get_formatted_time(v)}{LEXICON_RU["target"]}: '
+                               f'{targets_map.get(k, "")*multiplier} {LEXICON_RU["minutes"]}</code>\n')
         if i == len(result) - 2:
             print("-" * (max_name_length + 1))
             return_message += f'{"-" * (max_name_length + 1)}\n'
@@ -151,5 +151,9 @@ async def get_targets_for_tasks(session: AsyncSession, db_user_id: int) -> dict:
     return tasks_with_targets
 
 
-async def goal_achieved(session: AsyncSession, db_user_id: int) -> bool:
-    ...
+async def goal_achieved(spend_time: timedelta, target_time: int) -> str:
+    if target_time <= spend_time.total_seconds() / 60:
+        return 'achieved'
+    else:
+        return 'not_achieved'
+

@@ -83,4 +83,7 @@ LEXICON_RU: dict[str, str] = {
     'time_to_work': '<strong>💪 Давай поработаем?</strong>\n\nОтдыхаем уже более',
     'target_time_not_set': 'Не задана',
     'target': 'Цель',
+    'achieved': '✅',
+    'not_achieved': '❌',
+    'not_set': '❔',
 }
