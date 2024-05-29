@@ -25,6 +25,7 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
     # Фильтр по дате, где дата больше или равно текущий год, месяц, день
     today = datetime.today()
     if period == 'today':
+        multiplier = 1
         start_of_day = datetime(today.year, today.month, today.day, 0, 0, 0)  # Начало текущего дня
         end_of_day = datetime(today.year, today.month, today.day, 23, 59, 59)  # Конец текущего дня
 
@@ -33,6 +34,7 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
             Works.end_time <= end_of_day
         )
     elif period == 'yesterday':
+        multiplier = 1
         yesterday = today - timedelta(days=1)
 
         start_of_yesterday = datetime(yesterday.year, yesterday.month, yesterday.day, 0, 0, 0)  # Начало вчерашнего дня
@@ -45,13 +47,16 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
     elif period == 'week':
         start_of_week = today - timedelta(days=today.weekday())
         start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-
+        multiplier = today.weekday() + 1
+        # цель умножается на количество дней с начала недели
         stats_query = query.filter(
             Works.start_time >= start_of_week,
             Works.end_time <= datetime.today()
         )
     else:
         start_of_month = datetime(today.year, today.month, 1)
+        multiplier = (datetime.today() - start_of_month).days
+        # цель умножается на количество дней с начала месяца
         stats_query = query.filter(
             Works.start_time >= start_of_month,
             Works.end_time <= datetime.today()
@@ -79,9 +84,13 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
     for i, (k, v) in enumerate(result.items()):
         padding = " " * (max_name_length - len(k))
         # Форматируем сообщение немного
-        return_message += (f'<code>{k}{padding}: {await get_formatted_time(v)} '
-                           f'{LEXICON_RU["target"]}: {targets_map.get(k, "")} '
-                           f'{LEXICON_RU["minutes"]}</code>\n')
+        if targets_map.get(k, '') == '':
+            return_message += (f'<code>{k}{padding}: {await get_formatted_time(v)} '
+                               f'{LEXICON_RU["target"]}: {LEXICON_RU["target_time_not_set"]}</code>\n')
+        else:
+            return_message += (f'<code>{k}{padding}: {await get_formatted_time(v)} '
+                               f'{LEXICON_RU["target"]}: {targets_map.get(k, "")*multiplier} '
+                               f'{LEXICON_RU["minutes"]}</code>\n')
         if i == len(result) - 2:
             print("-" * (max_name_length + 1))
             return_message += f'{"-" * (max_name_length + 1)}\n'
@@ -137,6 +146,10 @@ async def get_targets_for_tasks(session: AsyncSession, db_user_id: int) -> dict:
     tasks_with_targets = {}
     for task in tasks:
         if getattr(task, 'target_time', None) is None:
-            task.target_time = LEXICON_RU['target_time_not_set']
+            task.target_time = ''
         tasks_with_targets[task.name] = task.target_time
     return tasks_with_targets
+
+
+async def goal_achieved(session: AsyncSession, db_user_id: int) -> bool:
+    ...
