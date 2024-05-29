@@ -82,15 +82,16 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
     # Цели выполнения задач будут добавлены в строку сообщения
     max_name_length = max(len(k) for k in result.keys())
     for i, (k, v) in enumerate(result.items()):
-        padding = " " * (max_name_length - len(k))
+        padding = ' ' * (max_name_length - len(k))
+        target_pad = ' ' * (max_name_length - 4)
         # Форматируем сообщение
         if targets_map.get(k, '') == '':
-            return_message += (f'<code>{LEXICON_RU["not_set"]} {k}{padding}: {await get_formatted_time(v)}'
-                               f'{LEXICON_RU["target"]}: {LEXICON_RU["target_time_not_set"]}</code>\n')
+            return_message += (f'<code>{LEXICON_RU["not_set"]} {k}{padding}: {await get_formatted_time(v)}\n'
+                               f'{LEXICON_RU["target"]}{target_pad}: {await get_formatted_time(timedelta(minutes=0))}</code>\n')
         else:
             return_message += (f'<code>{LEXICON_RU[await goal_achieved(v, targets_map[k])]} {k}{padding}: '
-                               f'{await get_formatted_time(v)}{LEXICON_RU["target"]}: '
-                               f'{targets_map.get(k, "")*multiplier} {LEXICON_RU["minutes"]}</code>\n')
+                               f'{await get_formatted_time(v)}\n{LEXICON_RU["target"]}{target_pad}: '
+                               f'{await get_formatted_time(timedelta(minutes=targets_map.get(k, "")*multiplier))}</code>\n')
         if i == len(result) - 2:
             print("-" * (max_name_length + 1))
             return_message += f'{"-" * (max_name_length + 1)}\n'
