@@ -112,6 +112,7 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
     file_path = "services/stats.png"
     plt.savefig(file_path, format='png', bbox_inches="tight")
 
+    await session.commit()
     return return_message, file_path
 
 
