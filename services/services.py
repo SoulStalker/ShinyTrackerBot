@@ -1,8 +1,8 @@
-from matplotlib import pyplot as plt
-
 from datetime import datetime, timedelta
 
+from matplotlib import pyplot as plt
 from matplotlib.colors import CSS4_COLORS
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,9 +19,7 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
         Works.start_time,
         Works.end_time,
     ).join(Task, Task.id == Works.task_id).order_by(Task.name).
-    where(
-        Works.user_id == user_id,
-        ))
+        filter(Works.user_id == user_id))
     # Фильтр по дате, где дата больше или равно текущий год, месяц, день
     today = datetime.today()
     if period == 'today':
@@ -91,7 +89,7 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
         else:
             return_message += (f'<code>{LEXICON_RU[await goal_achieved(v, targets_map[k])]} {k}{padding}: '
                                f'{await get_formatted_time(v)}\n{LEXICON_RU["target"]}{target_pad}: '
-                               f'{await get_formatted_time(timedelta(minutes=targets_map.get(k, "")*multiplier))}</code>\n')
+                               f'{await get_formatted_time(timedelta(minutes=targets_map.get(k, "") * multiplier))}</code>\n')
         if i == len(result) - 2:
             print("-" * (max_name_length + 1))
             return_message += f'{"-" * (max_name_length + 1)}\n'
@@ -158,4 +156,3 @@ async def goal_achieved(spend_time: timedelta, target_time: int) -> str:
         return 'achieved'
     else:
         return 'not_achieved'
-

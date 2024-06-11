@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional, Any, Sequence
 
-from sqlalchemy import select, update, delete, and_, desc, null, Row, RowMapping, Result, CursorResult
+from sqlalchemy import select, update, delete, and_, desc, Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models import User, Task, Works, Settings
@@ -162,4 +162,4 @@ async def orm_get_last_work(session: AsyncSession, user_id: int) -> Works:
     if not work:
         return None
 
-    return work[0]  # Вернуть первую запись с максимальным end_time
+    return work[0]
