@@ -201,8 +201,8 @@ async def plot_gantt_chart(session: AsyncSession, db_user_id: int, color_map, fi
 
         ax.broken_barh([(start, duration)], (0, bar_height), facecolors=task_color)
         # Добавление аннотаций задач
-        ax.annotate(task, (start + duration / 2, 0.5), color='black', weight='bold',
-                    fontsize=5, ha='center', va='center')
+        ax.annotate(task, (start + duration / 2, 0.5), color='black',
+                    fontsize=7, ha='center', va='center', rotation=90)
 
     # Настройка осей
     ax.set_ylim(0, 1)
