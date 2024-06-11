@@ -347,7 +347,6 @@ async def process_start_task(callback: CallbackQuery, session: AsyncSession, bot
     if stats_task:
         stats_task.cancel()
     stats_task = asyncio.create_task(send_scheduled_stats(bot, session, callback.from_user.id, user.id, time(18, 5)))
-    print(stats_task)
 
     if work_task:
         work_task.cancel()
@@ -384,7 +383,6 @@ async def process_stop(callback: CallbackQuery, session: AsyncSession, bot: Bot)
     if work_task:
         work_task.cancel()
     rest_task = asyncio.create_task(rest_time_pomodoro(bot, session, callback.message, user.id, period))
-    print(dir(rest_task))
 
 
 # Этот хендлер срабатывает на нажатие кнопки статистики и возвращает клавиатуру с периодами

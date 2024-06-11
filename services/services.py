@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from matplotlib import pyplot as plt
 from matplotlib.colors import CSS4_COLORS
+import matplotlib.dates as mdates
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -74,7 +75,6 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
 
     # Добавляем итоговое значение для всех задач
     result = {k: v for k, v in sorted(result.items(), key=lambda item: item[1])}
-
     result.setdefault(LEXICON_RU['total'], sum(result.values(), timedelta()))
     targets_map = await get_targets_for_tasks(session, user_id)
     # Цели выполнения задач будут добавлены в строку сообщения
@@ -91,10 +91,9 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
                                f'{await get_formatted_time(v)}\n{LEXICON_RU["target"]}{target_pad}: '
                                f'{await get_formatted_time(timedelta(minutes=targets_map.get(k, "") * multiplier))}</code>\n')
         if i == len(result) - 2:
-            print("-" * (max_name_length + 1))
             return_message += f'{"-" * (max_name_length + 1)}\n'
-        print(return_message)
 
+    # Создание кругового графика
     color_map = await get_colors_for_tasks(session, user_id)
     colors = [color_map.get(k, "gray") for k in list(result.keys())[:-1]]
 
@@ -111,6 +110,8 @@ async def orm_get_day_stats(session: AsyncSession, user_id: int, period: str):
     plt.savefig(file_path, format='png', bbox_inches="tight")
 
     await session.commit()
+    if period == 'today':
+        file_path = await plot_gantt_chart(session, user_id, color_map)
     return return_message, file_path
 
 
@@ -156,3 +157,62 @@ async def goal_achieved(spend_time: timedelta, target_time: int) -> str:
         return 'achieved'
     else:
         return 'not_achieved'
+
+
+async def plot_gantt_chart(session: AsyncSession, db_user_id: int, color_map, fig_size=(12, 2), bar_height=1) -> str:
+    today = datetime.today()
+    start_of_day = datetime(today.year, today.month, today.day, 0, 0, 0)
+    query = (select(
+        Task.name,
+        Works.start_time,
+        Works.end_time,
+    ).join(Task, Task.id == Works.task_id).order_by(Task.name).
+             filter(Works.user_id == db_user_id, Works.start_time > start_of_day))
+    stats = await session.execute(query)
+
+    tasks = []
+    start_times = []
+    end_times = []
+
+    for stat in stats:
+        task_name = stat[0]
+        start_time = stat[1]
+        end_time = stat[2]
+
+        tasks.append(task_name)
+        start_times.append(start_time)
+        end_times.append(end_time)
+
+    # Построение временной шкалы
+    fig, ax = plt.subplots(figsize=fig_size)
+
+    # Установка формата дат на оси X
+    ax.xaxis.set_major_locator(mdates.HourLocator(interval=1))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+
+    # Добавление полосок задач на временную шкалу на одной линии
+    y_pos = 0.5  # Позиция по оси Y для всех задач
+    for i, task in enumerate(tasks):
+        start = mdates.date2num(start_times[i])
+        end = mdates.date2num(end_times[i])
+        duration = end - start
+        # Получаю цвет из color_map
+        task_color = color_map.get(task, (0, 0, 0, 0))
+
+        ax.broken_barh([(start, duration)], (0, bar_height), facecolors=task_color)
+        # Добавление аннотаций задач
+        ax.annotate(task, (start + duration / 2, 0.5), color='black', weight='bold',
+                    fontsize=5, ha='center', va='center')
+
+    # Настройка осей
+    ax.set_ylim(0, 1)
+    ax.set_yticks([])
+    ax.set_xlabel(LEXICON_RU['time'])
+    ax.set_ylabel(LEXICON_RU['tasks'])
+    ax.set_title(LEXICON_RU['time_line'])
+    plt.gcf().autofmt_xdate()
+
+    file_path = "services/gantt_chart.png"
+    plt.savefig(file_path, format='png', bbox_inches="tight")
+
+    return file_path
